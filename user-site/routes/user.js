@@ -16,7 +16,7 @@ const db = mysql.createConnection({
 router.post('/login', async (req, res) => {
   const { username, password } = req.body;
 
-  // Example DB check — replace with your own logic
+  // DB check
   const query = 'SELECT * FROM users WHERE username = ? AND password = ? AND role = "staff"';
   db.query(query, [username, password], (err, results) => {
     if (err) {
@@ -26,7 +26,8 @@ router.post('/login', async (req, res) => {
 
     if (results.length > 0) {
       // Successful login
-      res.redirect('/home');
+      req.session.username = results[0].username; // store user ID in session
+      res.redirect('/home'); // Redirect to home page
     } else {
       // Invalid login
       res.send(`<script>
@@ -35,6 +36,11 @@ router.post('/login', async (req, res) => {
       </script>`);
     }
   });
+});
+
+// Home GET route
+router.get('/home', (req, res) => {
+  res.render('home'); 
 });
 
 router.get('/forgot-password', (req, res) => {
@@ -60,7 +66,7 @@ router.post('/forgot-password', (req, res) => {
     from: process.env.EMAIL_USER,
     to: adminEmail,
     subject: 'Password Request',
-    text: `User "${username}" with email "${email}" requested a password reset.`
+    text: `User "${username}" with email "${email}" requested password.`
   };
 
   transporter.sendMail(mailOptions, (error, info) => {
@@ -80,5 +86,30 @@ router.post('/forgot-password', (req, res) => {
   });
 });
 
+router.get('/login', (req, res) => {
+  res.render('login'); // Renders views/login.ejs
+});
+
+router.get('/profile', (req, res) => {
+  const username = req.session.username;
+
+  if (!username) {
+    return res.redirect('/login');
+  }
+
+  const query = 'SELECT * FROM users WHERE username = ?';
+  db.query(query, [username], (err, results) => {
+    if (err) {
+      console.error('Error retrieving user data:', err);
+      return res.status(500).send('Server error');
+    }
+
+    if (results.length === 0) {
+      return res.status(404).send('User not found');
+    }
+
+    res.render('profile', { user: results[0] }); // send user data to EJS
+  });
+});
 
 module.exports = router;

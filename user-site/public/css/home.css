@@ -1,0 +1,95 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background-color: #fcfcfc;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  left: 0px;
+  width: 250px;
+  height: 100%;
+  background-color: #2c3e50;
+  padding-top: 5px;
+  transition: 0.3s;
+  color: white;
+  z-index: 1000;
+}
+
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+}
+
+.sidebar ul li {
+  padding: 0px;
+}
+
+.sidebar ul li a {
+  color: white;
+  text-decoration: none;
+  display: block;
+  padding: 15px 20px; 
+  border-radius: 5px;
+}
+
+.sidebar ul li a:hover {
+  background-color: #34495e;
+}
+
+.sidebar .menu {
+  flex: 1 1 auto;
+}
+
+.logout {
+  margin-top: auto;
+  padding-bottom: 5px;
+}
+
+.collapse:not(.show) {
+  display: none;
+}
+
+#inventoryMenu .dropdown-item {
+  padding-left: 35px;
+}
+
+.bi-chevron-down {
+  padding-left: 85px;
+}
+
+.content {
+  margin-left: 270px; /* Adjusted to account for sidebar width */
+  margin-right: 20px;
+  padding: 5px;
+}
+
+.content h1 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+hr {
+    opacity: 0.3;
+    border: 1px solid #ccc;
+}
+
+#dateTime {
+  font-size: 18px;
+  font-weight: bold;
+  margin-top: 10px;
+  text-align: center;
+}
+
+a {
+  color: #2c3e50;
+  text-decoration: none;
+}
+
+a:hover {
+  color: #34495e;
+}
