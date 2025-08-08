@@ -17,7 +17,7 @@ router.post('/login', async (req, res) => {
   const { username, password } = req.body;
 
   // DB check
-  const query = 'SELECT * FROM users WHERE username = ? AND password = ? AND role = "staff"';
+  const query = 'SELECT * FROM users WHERE username = ? AND password = ? AND role = "warehouse staff"';
   db.query(query, [username, password], (err, results) => {
     if (err) {
       console.error(err);
@@ -111,5 +111,47 @@ router.get('/profile', (req, res) => {
     res.render('profile', { user: results[0] }); // send user data to EJS
   });
 });
+
+router.get('/item', (req, res) => {
+  const searchQuery = req.query.q;
+
+  let query = 'SELECT * FROM items';
+  let params = [];
+
+  if (searchQuery && searchQuery.trim() !== '') {
+    query += ' WHERE name LIKE ? OR category LIKE ?';
+    const searchTerm = `%${searchQuery.trim()}%`;
+    params = [searchTerm, searchTerm];
+  }
+
+  db.query(query, params, (err, results) => {
+    if (err) {
+      console.error('Error fetching items:', err);
+      return res.status(500).send('Server error');
+    }
+
+    res.render('item', { items: results, search: searchQuery || '' });
+  });
+});
+
+router.get('/item/:id', (req, res) => {
+  const itemId = req.params.id;
+  const sql = 'SELECT * FROM items WHERE id = ?';
+
+  db.query(sql, [itemId], (err, result) => {
+    if (err) {
+      return res.status(500).send('Database error');
+    }
+    if (result.length === 0) {
+      return res.status(404).send('Item not found');
+    }
+    res.render('item-detail', { item: result[0] });
+  });
+});
+
+router.get('/edit-item', (req, res) => {
+  res.render('edit-item');
+});
+
 
 module.exports = router;

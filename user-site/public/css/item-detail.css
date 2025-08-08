@@ -1,0 +1,11 @@
+.item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.item-actions i {
+  font-size: 1.2rem;
+  margin-left: 8px;
+  cursor: pointer;
+}
