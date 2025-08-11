@@ -149,9 +149,76 @@ router.get('/item/:id', (req, res) => {
   });
 });
 
-router.get('/edit-item', (req, res) => {
-  res.render('edit-item');
+// Show edit form
+router.get('/item/edit/:id', (req, res) => {
+  const id = req.params.id;
+  const sql = 'SELECT * FROM items WHERE id = ?';
+
+  db.query(sql, [id], (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).send('Database error');
+    }
+    if (results.length === 0) {
+      return res.status(404).send('Item not found');
+    }
+
+    res.render('edit-item', { item: results[0] });
+  });
 });
 
+// Handle form submission
+router.post('/item/edit/:id', (req, res) => {
+  const id = req.params.id;
+  const { name, sku, category, color, quantity, price, barcode, description } = req.body;
+
+  const sql = 'UPDATE items SET name = ?, sku = ?, category = ?, color = ?, quantity = ?, price = ?, barcode = ?, description = ? WHERE id = ?';
+  db.query(sql, [name, sku, category, color, quantity, price, barcode, description, id], (err, result) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).send('Failed to update item');
+    }
+    res.send(`
+      <script>
+        alert("Successfully saved");
+        window.location.href = "/item/${id}";
+      </script>
+    `);
+  });
+});
+
+// Delete item POST route
+router.delete('/item/delete/:id', (req, res) => {
+  const id = req.params.id;
+  
+  const sql = 'DELETE FROM items WHERE id = ?';
+  db.query(sql, [id], (err, result) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ message: 'Failed to delete item' });
+    }
+
+      res.json({ message: 'Item deleted successfully' });
+    });
+});
+
+router.get('/add-item', (req, res) => {
+  res.render('add-item');
+});
+
+// Add item POST route
+router.post("/add-item", (req, res) => {
+    const { name, sku, category, color, quantity, price, barcode, description } = req.body;
+
+    const sql = `
+        INSERT INTO items (name, sku, category, color, quantity, price, barcode, description)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+    db.query(sql, [name, sku, category, color, quantity, price, barcode, description], (err, result) => {
+        if (err) throw err;
+        console.log("Item added:", result.insertId);
+        res.redirect("/item"); // redirect to item list page
+    });
+});
 
 module.exports = router;
