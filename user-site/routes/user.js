@@ -114,12 +114,17 @@ router.get('/profile', (req, res) => {
 
 router.get('/item', (req, res) => {
   const searchQuery = req.query.q;
-
-  let query = 'SELECT * FROM items';
   let params = [];
 
+  let query = `
+    SELECT i.id, i.name, i.sku, i.color, i.quantity, i.price, i.barcode, i.description,
+           c.name AS category_name
+    FROM items i
+    LEFT JOIN categories c ON i.category_id = c.id
+  `;
+
   if (searchQuery && searchQuery.trim() !== '') {
-    query += ' WHERE name LIKE ? OR category LIKE ?';
+    query += ' WHERE i.name LIKE ? OR c.name LIKE ?';
     const searchTerm = `%${searchQuery.trim()}%`;
     params = [searchTerm, searchTerm];
   }
@@ -136,44 +141,70 @@ router.get('/item', (req, res) => {
 
 router.get('/item/:id', (req, res) => {
   const itemId = req.params.id;
-  const sql = 'SELECT * FROM items WHERE id = ?';
+  const sql = `
+    SELECT i.*, c.name AS category_name
+    FROM items i
+    LEFT JOIN categories c ON i.category_id = c.id
+    WHERE i.id = ?
+  `;
 
   db.query(sql, [itemId], (err, result) => {
     if (err) {
+      console.error('Error fetching item:', err);
       return res.status(500).send('Database error');
     }
     if (result.length === 0) {
       return res.status(404).send('Item not found');
     }
+
     res.render('item-detail', { item: result[0] });
   });
 });
 
+
 // Show edit form
 router.get('/item/edit/:id', (req, res) => {
   const id = req.params.id;
-  const sql = 'SELECT * FROM items WHERE id = ?';
 
-  db.query(sql, [id], (err, results) => {
+  const itemSql = 'SELECT * FROM items WHERE id = ?';
+  const categorySql = 'SELECT * FROM categories';
+
+  db.query(itemSql, [id], (err, itemResults) => {
     if (err) {
       console.error(err);
       return res.status(500).send('Database error');
     }
-    if (results.length === 0) {
+    if (itemResults.length === 0) {
       return res.status(404).send('Item not found');
     }
 
-    res.render('edit-item', { item: results[0] });
+    db.query(categorySql, (err, categoryResults) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).send('Database error');
+      }
+
+      res.render('edit-item', {
+        item: itemResults[0],
+        categories: categoryResults
+      });
+    });
   });
 });
+
 
 // Handle form submission
 router.post('/item/edit/:id', (req, res) => {
   const id = req.params.id;
-  const { name, sku, category, color, quantity, price, barcode, description } = req.body;
+  const { name, sku, category_id, color, quantity, price, barcode, description } = req.body;
 
-  const sql = 'UPDATE items SET name = ?, sku = ?, category = ?, color = ?, quantity = ?, price = ?, barcode = ?, description = ? WHERE id = ?';
-  db.query(sql, [name, sku, category, color, quantity, price, barcode, description, id], (err, result) => {
+  const sql = `
+    UPDATE items 
+    SET name = ?, sku = ?, category_id = ?, color = ?, quantity = ?, price = ?, barcode = ?, description = ?
+    WHERE id = ?
+  `;
+
+  db.query(sql, [name, sku, category_id, color, quantity, price, barcode, description, id], (err, result) => {
     if (err) {
       console.error(err);
       return res.status(500).send('Failed to update item');
@@ -186,6 +217,7 @@ router.post('/item/edit/:id', (req, res) => {
     `);
   });
 });
+
 
 // Delete item POST route
 router.delete('/item/delete/:id', (req, res) => {
@@ -203,22 +235,47 @@ router.delete('/item/delete/:id', (req, res) => {
 });
 
 router.get('/add-item', (req, res) => {
-  res.render('add-item');
+  const sql = "SELECT id, name FROM categories";
+  db.query(sql, (err, categories) => {
+    if (err) return res.status(500).send(err);
+    res.render('add-item', { categories });
+  });
 });
 
 // Add item POST route
 router.post("/add-item", (req, res) => {
-    const { name, sku, category, color, quantity, price, barcode, description } = req.body;
+    const { name, sku, category_id, color, quantity, price, barcode, description } = req.body;
 
     const sql = `
-        INSERT INTO items (name, sku, category, color, quantity, price, barcode, description)
+        INSERT INTO items (name, sku, category_id, color, quantity, price, barcode, description)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `;
-    db.query(sql, [name, sku, category, color, quantity, price, barcode, description], (err, result) => {
+    db.query(sql, [name, sku, category_id, color, quantity, price, barcode, description], (err, result) => {
         if (err) throw err;
         console.log("Item added:", result.insertId);
         res.redirect("/item"); // redirect to item list page
     });
+});
+
+router.get('/category', (req, res) => {
+  const search = req.query.q ? `%${req.query.q}%` : null;
+
+  let sql = `
+    SELECT c.id, c.name, c.description, IFNULL(SUM(i.quantity), 0) AS total_quantity
+    FROM categories c
+    LEFT JOIN items i ON c.id = i.category_id
+  `;
+
+  if (search) {
+    sql += ` WHERE c.name LIKE ? `;
+  }
+
+  sql += ` GROUP BY c.id, c.name, c.description`;
+
+  db.query(sql, search ? [search] : [], (err, results) => {
+    if (err) return res.status(500).send(err);
+    res.render('category', { categories: results });
+  });
 });
 
 module.exports = router;

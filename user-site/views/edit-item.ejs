@@ -55,8 +55,14 @@
             <label for="sku">SKU</label>
             <input type="text" name="sku" value="<%= item.sku %>" required>
 
-            <label for="category">Category</label>
-            <input type="text" name="category" value="<%= item.category %>" required>
+           <label for="category_id">Category</label>    
+           <select name="category_id" required>
+            <% categories.forEach(function(cat) { %>
+            <option value="<%= cat.id %>" <%= item.category_id === cat.id ? "selected" : "" %>>
+            <%= cat.name %>
+            </option>
+            <% }) %>
+           </select>
 
             <label for="color">Color</label>
             <input type="text" name="color" value="<%= item.color %>" required>

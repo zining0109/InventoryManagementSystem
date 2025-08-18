@@ -54,7 +54,9 @@
             <input type="text" id="sku" name="sku">
 
             <label for="category">Category</label>
-            <input type="text" id="category" name="category">
+            <select name="category_id" class="form-control" required>
+              <% categories.forEach(cat => { %><option value="<%= cat.id %>"><%= cat.name %></option><% }) %>
+            </select>
 
             <label for="color">Color</label>
             <input type="text" id="color" name="color">
