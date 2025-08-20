@@ -218,7 +218,6 @@ router.post('/item/edit/:id', (req, res) => {
   });
 });
 
-
 // Delete item POST route
 router.delete('/item/delete/:id', (req, res) => {
   const id = req.params.id;
@@ -276,6 +275,131 @@ router.get('/category', (req, res) => {
     if (err) return res.status(500).send(err);
     res.render('category', { categories: results });
   });
+});
+
+// Get items of a category (AJAX)
+router.get('/category/:id/items', (req, res) => {
+  const categoryId = req.params.id;
+  const sql = 'SELECT id, name FROM items WHERE category_id = ?';
+
+  db.query(sql, [categoryId], (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(results); // return items as JSON
+  });
+});
+
+router.delete('/category/delete/:id', (req, res) => {
+  const id = req.params.id;
+  db.query('DELETE FROM categories WHERE id = ?', [id], (err, result) => {
+    if (err) {
+      console.error(err);
+      return res.json({ success: false });
+    }
+    res.json({ success: true });
+  });
+});
+
+router.get('/add-category', (req, res) => {
+  res.render('add-category'); 
+});
+
+// Handle add form
+router.post('/add-category', (req, res) => {
+  const { name, description } = req.body;
+  const sql = 'INSERT INTO categories (name, description) VALUES (?, ?)';
+
+  db.query(sql, [name, description], (err, result) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).send('Database error');
+    }
+
+    res.send(`
+      <script>
+        alert("Category added successfully!");
+        window.location.href = "/category";
+      </script>
+    `);
+  });
+});
+
+// Edit category page
+router.get('/category/edit/:id', (req, res) => {
+  const categoryId = req.params.id;
+
+  // Fetch category details
+  const sqlCategory = 'SELECT * FROM categories WHERE id = ?';
+  // Fetch items of this category
+  const sqlItems = 'SELECT * FROM items WHERE category_id = ?';
+  // Fetch all categories (for moving items)
+  const sqlAllCategories = 'SELECT id, name FROM categories';
+
+  db.query(sqlCategory, [categoryId], (err, categoryResult) => {
+    if (err) return res.status(500).send(err);
+
+    db.query(sqlItems, [categoryId], (err2, itemsResult) => {
+      if (err2) return res.status(500).send(err2);
+
+      db.query(sqlAllCategories, (err3, allCats) => {
+        if (err3) return res.status(500).send(err3);
+
+        res.render('edit-category', { 
+          category: categoryResult[0], 
+          items: itemsResult,
+          allCategories: allCats
+        });
+      });
+    });
+  });
+});
+
+// Save edited category info
+router.post('/category/edit/:id', (req, res) => {
+  const { name, description } = req.body;
+  const categoryId = req.params.id;
+
+  const sql = 'UPDATE categories SET name = ?, description = ? WHERE id = ?';
+  db.query(sql, [name, description, categoryId], (err, result) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).send('Database error');
+    }
+
+    res.send(`
+      <script>
+        alert("Category updated successfully!");
+        window.location.href = "/category";
+      </script>
+    `);
+  });
+});
+
+// Move item to another category
+router.post('/item/:id/move', (req, res) => {
+  const itemId = req.params.id;
+  const { newCategoryId, oldCategoryId } = req.body;
+
+  const sql = 'UPDATE items SET category_id = ? WHERE id = ?';
+  db.query(sql, [newCategoryId, itemId], (err, result) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).send('Database error');
+    }
+
+    res.send(`
+      <script>
+        alert("Item moved successfully!");
+        window.location.href = "/category/edit/${oldCategoryId}";
+      </script>
+    `);
+  });
+});
+
+router.get('/barcode', (req, res) => {
+  res.render('barcode'); // Render barcode.ejs
 });
 
 module.exports = router;

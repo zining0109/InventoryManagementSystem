@@ -23,3 +23,13 @@ button {
     background-color: #fcfcfc;
     cursor: pointer;
 }
+
+.btn1 {
+    width: 55px;
+    height: 28px;
+    background-color: #0078D7;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}

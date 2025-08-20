@@ -8,6 +8,74 @@
     <link rel="stylesheet" href="/css/menu.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+      <% categories.forEach(cat => { %>
+        fetch(`/category/<%= cat.id %>/items`)
+          .then(res => res.json())
+          .then(data => {
+            const container = document.getElementById("items-<%= cat.id %>");
+            if (data.length === 0) {
+              container.innerHTML = "<em>No items</em>";
+            } else {
+              const limit = 3;
+              const preview = data.slice(0, limit).map(i => i.name).join(", ");
+              const fullList = data.map(i => `<li>${i.name}</li>`).join("");
+
+              if (data.length > limit) {
+                container.innerHTML = `
+                  <div class="item-preview">
+                    ${preview}...
+                    <button class="expand-btn btn btn-sm btn-link p-0">▼</button>
+                  </div>
+                  <div class="item-full" style="display:none;">
+                    <ul style="margin:0; padding-left:18px;">${fullList}</ul>
+                    <button class="collapse-btn btn btn-sm btn-link p-0">▲</button>
+                  </div>
+                `;
+
+                const expandBtn = container.querySelector(".expand-btn");
+                const collapseBtn = container.querySelector(".collapse-btn");
+                const previewEl = container.querySelector(".item-preview");
+                const fullEl = container.querySelector(".item-full");
+
+                expandBtn.addEventListener("click", () => {
+                  previewEl.style.display = "none";
+                  fullEl.style.display = "block";
+                });
+
+                collapseBtn.addEventListener("click", () => {
+                  fullEl.style.display = "none";
+                  previewEl.style.display = "block";
+                });
+              } else {
+                container.innerHTML = `<ul style="margin:0; padding-left:18px;">${fullList}</ul>`;
+              }
+            }
+          });
+      <% }) %>
+    });
+
+      function deleteCategory(id) {
+        id = Number(id);
+        if (confirm("Are you sure you want to delete this category?")) {
+        fetch(`/category/delete/${id}`, { method: "DELETE" })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            document.getElementById("row-" + id).remove();
+            alert("Category deleted successfully.");
+          } else {
+            alert("Failed to delete category.");
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          alert("Error deleting category.");
+        });
+        }
+      }
+  </script>
 </head>
 <body>
   <!-- Sidebar -->
@@ -43,11 +111,11 @@
     <hr>
     <div class="container2">
       <h2 style="display: flex; align-items: center; gap: 10px;">Category
-        <form class="d-flex" method="GET" action="/item">
+        <form class="d-flex" method="GET" action="/category">
           <input class="form-control me-2" type="search" name="q" placeholder="Search name..." aria-label="Search">
           <button class="btn btn-outline-primary" type="submit"><i class="bi bi-search"></i></button>
         </form> 
-        <a href="/add-item"><i class="bi bi-plus-square fs-4" style="padding-left: 500px;"></i></a>
+        <a href="/add-category"><i class="bi bi-plus-square fs-4" style="padding-left: 500px;"></i></a>
       </h2>
     </div>
     <hr>
@@ -59,13 +127,15 @@
           <th>Name</th>
           <th>Total Quantity</th> 
           <th>Description</th>
+          <th>Items</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody>
-        <tr><td colspan="7"><hr></td></tr> <!-- Line after header -->
+        <tr><td colspan="6"><hr></td></tr> <!-- Line after header -->
         <% if (categories.length === 0) { %>
         <tr>
-          <td colspan="7" style="text-align: center;">No item found</td>
+          <td colspan="6" style="text-align: center;">No item found</td>
         </tr>
         <% } else { %>
         <% categories.forEach(cat => { %>
@@ -74,8 +144,14 @@
           <td><%= cat.name %></td> 
           <td><%= cat.total_quantity %></td>
           <td><%= cat.description %></td>
+          <td>
+            <div id="items-<%= cat.id %>">Loading...</div>
+          </td>
+          <td>
+            <button onclick="window.location.href='/category/edit/<%= cat.id %>'" class="btn1">Edit</button>
+          </td>
         </tr>
-        <tr><td colspan="7"><hr></td></tr> <!-- Line between items -->
+        <tr><td colspan="6"><hr></td></tr> <!-- Line between items -->
         <% }) %>
         <% } %>
       </tbody>
