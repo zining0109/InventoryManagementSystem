@@ -46,8 +46,126 @@
     </div>
     <hr>
     <div class="container3">
+      <!-- Trigger -->
+      <div class="barcode-card" onclick="openModal('barcodeModal')">
+        <i class="bi bi-upc-scan display-1"></i>
+      </div>
+      <h4 class="card-title">Tap to Scan</h4>
+      <!-- Barcode Modal -->
+      <div id="barcodeModal" class="modal-overlay">
+        <div class="modal-box">
+          <span class="close-btn" onclick="closeModal('barcodeModal')">&times;</span>
+          <h2>Barcode Scan</h2>
+          <p>No scanner supported.</p>
+          <input type="text" id="barcodeInput" class="form-control mb-3" placeholder="Enter barcode number">
+          <button type="button" class="btn btn-primary w-100" onclick="searchBarcode()">Search</button>
+        <div id="barcodeResult" class="mt-3"></div>
+        <div class="modal-actions">
+        </div>
+        </div>
+      </div>
+      <!-- Inbound Modal -->
+      <div id="inboundModal" class="modal-overlay">
+        <div class="modal-box">
+          <span class="close-btn" onclick="closeModal('inboundModal')">&times;</span>
+          <h2>Inbound Stock</h2>
+          <form id="inboundForm" method="POST">
+            <label for="amount">Quantity to add:</label>
+            <input type="number" name="amount" id="inboundQty" class="form-control" placeholder="Enter quantity to add" required>
+            <div class="modal-actions">
+              <button onclick="closeModal('inboundModal')" class="btn btn-secondary">Cancel</button>
+              <button type="submit" class="btn btn-success">Confirm</button>
+            </div>
+          </form>
+        </div>
+      </div>
+      <!-- Outbound Modal -->
+      <div id="outboundModal" class="modal-overlay">
+        <div class="modal-box">
+          <span class="close-btn" onclick="closeModal('outboundModal')">&times;</span>
+          <h2>Outbound Stock</h2>
+          <form id="outboundForm" method="POST">
+            <label for="amount">Quantity to remove:</label>
+            <input type="number" name="amount" id="outboundQty" class="form-control" placeholder="Enter quantity to remove" required>
+            <div class="modal-actions">
+              <button onclick="closeModal('outboundModal')" class="btn btn-secondary">Cancel</button>
+              <button type="submit" class="btn btn-success">Confirm</button>
+            </div>
+          </form>
+        </div>
+      </div>
+<script>
+let currentItemId = null;
 
-    </div>
-  </div>
+function openModal(id) {
+  document.getElementById(id).style.display = "flex";
+}
+
+function closeModal(id) {
+  const modal = document.getElementById(id);
+    modal.style.display = "none";
+
+    // 🔹 Clear input and result when modal closes
+    if (id === "barcodeModal") {
+      document.getElementById("barcodeInput").value = "";
+      document.getElementById("barcodeResult").innerHTML = "";
+    }
+}
+
+function searchBarcode() {
+  const barcode = document.getElementById('barcodeInput').value;
+  if (!barcode) return;
+
+  fetch(`/search-barcode?barcode=${barcode}`)
+    .then(res => res.json())
+    .then(data => {
+      const resultDiv = document.getElementById('barcodeResult');
+      resultDiv.innerHTML = '';
+
+      if (data.exists) {
+        document.getElementById("inboundForm").action = "/inbound/" + data.item.id;
+        document.getElementById("outboundForm").action = "/outbound/" + data.item.id;
+        currentItemId = data.item.id;
+        resultDiv.innerHTML = `
+          <p>Item found: <b>${data.item.name}</b></p>
+          <div class="d-grid gap-2">
+            <button class="btn btn-info w-100" onclick="window.location.href='/item/${data.item.id}'" style="width: 82px; height=28px;">Show Item</button>
+            <button onclick="openModal('inboundModal')" class="btn btn-success" style="width: 80px; height=28px;">Inbound</button>
+            <button onclick="openModal('outboundModal')" class="btn btn-danger" style="width: 80px; height=28px;">Outbound</button>
+          </div>
+        `;
+      } else {
+        resultDiv.innerHTML = `
+          <p>No item found, please add item.</p>
+          <button onclick="window.location.href='/add-item'" class="btn btn-secondary w-100" style="width: 80px; height=28px;">Add Item</button>
+        `;
+      }
+    });
+}
+
+function submitInbound() {
+  const qty = document.getElementById("inboundQty").value;
+  fetch(`/item/${currentItemId}/inbound`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ amount: qty })
+  }).then(res => {
+    if (res.redirected) window.location.href = res.url;
+  });
+  closeModal('inboundModal');
+}
+
+function submitOutbound() {
+  const qty = document.getElementById("outboundQty").value;
+  fetch(`/item/${currentItemId}/outbound`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ amount: qty })
+  }).then(res => {
+    if (res.redirected) window.location.href = res.url;
+  });
+  closeModal('outboundModal');
+}
+</script>
 </body>
 </html>

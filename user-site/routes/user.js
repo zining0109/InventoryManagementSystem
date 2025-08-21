@@ -402,4 +402,76 @@ router.get('/barcode', (req, res) => {
   res.render('barcode'); // Render barcode.ejs
 });
 
+// Search barcode
+router.get("/search-barcode", (req, res) => {
+  const barcode = req.query.barcode;
+
+  if (!barcode) {
+    return res.json({ exists: false });
+  }
+
+  const sql = "SELECT * FROM items WHERE barcode = ?";
+  db.query(sql, [barcode], (err, results) => {
+    if (err) {
+      console.error("DB error:", err);
+      return res.status(500).json({ exists: false });
+    }
+
+    if (results.length > 0) {
+      const item = results[0];
+      res.json({
+        exists: true,
+        item: {
+          id: item.id,
+          name: item.name,
+          barcode: item.barcode,
+          stock: item.stock
+        }
+      });
+    } else {
+      res.json({ exists: false });
+    }
+  });
+});
+
+
+// Inbound (increase quantity)
+router.post('/inbound/:id', (req, res) => {
+  const { amount } = req.body;
+  const itemId = req.params.id;
+
+  const sql = "UPDATE items SET quantity = quantity + ? WHERE id = ?";
+  db.query(sql, [amount, itemId], (err) => {
+    if (err) {
+      console.error("Inbound error:", err);
+      return res.status(500).send("Database error");
+    }
+    res.redirect(`/item/${itemId}`);
+  });
+});
+
+// Outbound (decrease quantity)
+router.post('/outbound/:id', (req, res) => {
+  const itemId = req.params.id;
+  const { amount } = req.body;
+
+  const sql = `UPDATE items SET quantity = quantity - ? WHERE id = ? AND quantity >= ?`;
+  db.query(sql, [amount, itemId, amount], (err, result) => {
+    if (err) return res.status(500).send('Database error');
+
+    if (result.affectedRows === 0) {
+      // Not enough stock
+      return res.send(`
+        <script>
+          alert("Not enough stock for outbound!");
+          window.location.href = "/item/${itemId}";
+        </script>
+      `);
+    }
+
+    // redirect to item detail page
+    res.redirect(`/item/${itemId}`);
+  });
+});
+
 module.exports = router;
