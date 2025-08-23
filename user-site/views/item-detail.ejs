@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>All Item</title>
+    <title>Item Detail</title>
     <link rel="stylesheet" href="/css/menu.css">
     <link rel="stylesheet" href="/css/item-detail.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
@@ -50,6 +50,8 @@
     <div class="item-header">
       <h3><%= item.name %></h3>
        <div class="item-actions">
+        <i class="bi bi-patch-plus-fill" onclick="openModal('inboundModal')" style="cursor:pointer;"></i>
+        <i class="bi bi-patch-minus-fill" onclick="openModal('outboundModal')" style="cursor:pointer;"></i>
         <a href="/item/edit/<%= item.id %>"><i class="bi bi-pencil-square"></i></a>
         <a href="#" onclick="confirmDelete('<%= item.id %>')"><i class="bi bi-trash3"></i></a>
         <script>
@@ -78,6 +80,78 @@
     <p><strong>Barcode:</strong> <%= item.barcode %></p>
     <p><strong>Description:</strong> <%= item.description %></p>
     <p><strong>Created At:</strong> <%= item.created_at.toLocaleString() %></p>
-  </div>
+    </div>
+    <!-- Inbound Modal -->
+      <div id="inboundModal" class="modal-overlay">
+        <div class="modal-box">
+          <span class="close-btn" onclick="closeModal('inboundModal')">&times;</span>
+          <h2>Inbound Stock</h2>
+          <form id="inboundForm" method="POST" action="/inbound/<%= item.id %>">
+            <label for="amount">Quantity to add:</label>
+            <input type="number" name="amount" id="inboundQty" class="form-control" placeholder="Enter quantity to add" required>
+            <div class="modal-actions">
+              <button onclick="closeModal('inboundModal')" class="btn btn-secondary">Cancel</button>
+              <button type="submit" class="btn btn-success">Confirm</button>
+            </div>
+          </form>
+        </div>
+      </div>
+      <!-- Outbound Modal -->
+      <div id="outboundModal" class="modal-overlay">
+        <div class="modal-box">
+          <span class="close-btn" onclick="closeModal('outboundModal')">&times;</span>
+          <h2>Outbound Stock</h2>
+          <form id="outboundForm" method="POST" action="/outbound/<%= item.id %>">
+            <label for="amount">Quantity to remove:</label>
+            <input type="number" name="amount" id="outboundQty" class="form-control" placeholder="Enter quantity to remove" required>
+            <div class="modal-actions">
+              <button onclick="closeModal('outboundModal')" class="btn btn-secondary">Cancel</button>
+              <button type="submit" class="btn btn-success">Confirm</button>
+            </div>
+          </form>
+        </div>
+      </div>
+      <script>
+        function openModal(id) {
+          document.getElementById(id).style.display = "flex";
+        }
+
+        function closeModal(id) {
+          const modal = document.getElementById(id);
+          modal.style.display = "none";
+
+          // 🔹 Clear input and result when modal closes
+          if (id === "outboundModal") {
+            document.getElementById("outboundQty").value = "";
+          }
+          if (id === "inboundModal") {
+            document.getElementById("inboundQty").value = "";
+          }
+        }
+
+        function submitInbound() {
+          const qty = document.getElementById("inboundQty").value;
+          fetch(`/item/${currentItemId}/inbound`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ amount: qty })
+          }).then(res => {
+            if (res.redirected) window.location.href = res.url;
+          }).catch(err => console.error(err));
+          closeModal('inboundModal');
+        }
+
+        function submitOutbound() {
+          const qty = document.getElementById("outboundQty").value;
+          fetch(`/item/${currentItemId}/outbound`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ amount: qty })
+          }).then(res => {
+            if (res.redirected) window.location.href = res.url;
+          }).catch(err => console.error(err));
+          closeModal('outboundModal');
+        }
+      </script>
 </body>
 </html>

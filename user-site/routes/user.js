@@ -196,15 +196,15 @@ router.get('/item/edit/:id', (req, res) => {
 // Handle form submission
 router.post('/item/edit/:id', (req, res) => {
   const id = req.params.id;
-  const { name, sku, category_id, color, quantity, price, barcode, description } = req.body;
+  const { name, sku, category_id, color, price, barcode, description } = req.body;
 
   const sql = `
     UPDATE items 
-    SET name = ?, sku = ?, category_id = ?, color = ?, quantity = ?, price = ?, barcode = ?, description = ?
+    SET name = ?, sku = ?, category_id = ?, color = ?, price = ?, barcode = ?, description = ?
     WHERE id = ?
   `;
 
-  db.query(sql, [name, sku, category_id, color, quantity, price, barcode, description, id], (err, result) => {
+  db.query(sql, [name, sku, category_id, color, price, barcode, description, id], (err, result) => {
     if (err) {
       console.error(err);
       return res.status(500).send('Failed to update item');
@@ -472,6 +472,10 @@ router.post('/outbound/:id', (req, res) => {
     // redirect to item detail page
     res.redirect(`/item/${itemId}`);
   });
+});
+
+router.get('/history', (req, res) => {
+  res.render('history'); 
 });
 
 module.exports = router;
