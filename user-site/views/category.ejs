@@ -16,7 +16,7 @@
           .then(data => {
             const container = document.getElementById("items-<%= cat.id %>");
             if (data.length === 0) {
-              container.innerHTML = "<em>No items</em>";
+              container.innerHTML = "No items";
             } else {
               const limit = 3;
               const preview = data.slice(0, limit).map(i => i.name).join(", ");
@@ -71,7 +71,7 @@
         })
         .catch(err => {
           console.error(err);
-          alert("Error deleting category.");
+          alert("Error deleting category");
         });
         }
       }
@@ -115,7 +115,7 @@
           <input class="form-control me-2" type="search" name="q" placeholder="Search name..." aria-label="Search">
           <button class="btn btn-outline-primary" type="submit"><i class="bi bi-search"></i></button>
         </form> 
-        <a href="/add-category"><i class="bi bi-plus-square fs-4" style="padding-left: 500px;"></i></a>
+        <a href="/add-category"><i class="bi bi-bookmark-plus fs-4" style="padding-left: 500px;"></i></a>
       </h2>
     </div>
     <hr>

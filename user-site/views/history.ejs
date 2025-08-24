@@ -42,6 +42,105 @@
     </div>
     <hr>
     <div class="container2">
-      <h2>History</h2>
+      <h2 style="display: flex; align-items: center; gap: 10px;">History
+        <form class="d-flex" method="GET" action="/history" style="margin-left: 22px;">
+          <input class="form-control me-2" type="search" name="q" placeholder="Search name..." aria-label="Search">
+          <button class="btn btn-outline-primary" type="submit"><i class="bi bi-search"></i></button>
+        </form> 
+        <!-- Filter dropdown -->
+        <div class="custom-dropdown" id="filterDropdown" style="margin-left: 450px;">
+          <i class="bi bi-filter-circle-fill filter-icon" style="cursor: pointer;"></i>
+        <div class="custom-dropdown-menu">
+          <a href="/history?action=inbound">Inbound</a>
+          <a href="/history?action=outbound">Outbound</a>
+          <a href="/history">All</a>
+        </div>
+        </div>
+        <div class="date-filter" style="position: relative;">
+          <i class="bi bi-calendar2-fill calendar-icon" style="margin-left: 20px;"></i>
+          <!-- Hidden date picker menu -->
+          <div class="date-menu">
+            <form method="GET" action="/history" style="display: flex; flex-direction: column; gap: 8px; background-color: white">
+              <label>
+                Start Date:
+                <input type="date" name="start_date" value="<%= typeof start_date !== 'undefined' ? start_date : '' %>">
+              </label>
+              <label>
+                End Date:
+                <input type="date" name="end_date" value="<%= typeof end_date !== 'undefined' ? end_date : '' %>">
+              </label>
+              <button type="submit" class="btn btn-outline-primary">Apply</button>
+            </form>
+          </div>
+        </div>
+      </h2>
     </div>
     <hr>
+    <div class="container3">
+      <table class="table table-bordered">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Item Name</th>
+          <th>Action</th>
+          <th>Quantity</th>
+          <th>Current Quantity</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="6"><hr></td></tr> <!-- Line after header -->
+        <% if (history.length === 0) { %>
+        <tr>
+          <td colspan="6" style="text-align: center;">No history found.</td>
+        </tr>
+        <% } else { %>
+        <% history.forEach(h => { %>
+        <tr>
+          <td><%= h.id %></td>
+          <td><%= h.item_name %></td>
+          <td class="<%= h.action === 'inbound' ? 'text-success' : 'text-danger' %>">
+            <%= h.action %>
+          </td>
+          <td><%= h.amount %></td>
+          <td><%= h.current_quantity %></td>
+          <td><%= h.created_at.toLocaleString() %></td>
+        </tr>
+        <tr><td colspan="6"><hr></td></tr> <!-- Line between items -->
+      <% }) %>
+      <% } %>
+      </tbody>
+      </table>
+    </div>
+  </div>
+<script>
+  // Toggle dropdown
+  const filterDropdown = document.getElementById("filterDropdown");
+  const button = filterDropdown.querySelector(".filter-icon");
+
+  button.addEventListener("click", (e) => {
+    e.stopPropagation();
+    filterDropdown.classList.toggle("show");
+  });
+
+  // Close dropdown if clicked outside
+  document.addEventListener("click", () => {
+    filterDropdown.classList.remove("show");
+  });
+
+  const calendarIcon = document.querySelector('.calendar-icon');
+  const dateMenu = document.querySelector('.date-menu');
+
+  calendarIcon.addEventListener('click', () => {
+    dateMenu.style.display = dateMenu.style.display === 'block' ? 'none' : 'block';
+  });
+
+  // Optional: close if click outside
+  document.addEventListener('click', (event) => {
+    if (!event.target.closest('.date-filter')) {
+      dateMenu.style.display = 'none';
+    }
+  });
+</script>
+</body>
+</html>

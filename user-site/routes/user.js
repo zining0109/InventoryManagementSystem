@@ -25,13 +25,24 @@ router.post('/login', async (req, res) => {
     }
 
     if (results.length > 0) {
+      const user = results[0];
+
       // Successful login
       req.session.username = results[0].username; // store user ID in session
+
+      // Save full user object in session
+      req.session.user = {
+        id: user.id,
+        username: user.username,
+        role: user.role
+      };
+
+      console.log("User logged in:", req.session.user);
       res.redirect('/home'); // Redirect to home page
     } else {
       // Invalid login
       res.send(`<script>
-        alert("Invalid Username or Password");
+        alert("Invalid Username or Password. Please try again.");
         window.location.href = "/";
       </script>`);
     }
@@ -73,7 +84,7 @@ router.post('/forgot-password', (req, res) => {
     if (error) {
       console.error(error);
       return res.send(`<script>
-        alert("Failed to send email. Please try again later.");
+        alert("Failed to send email. Please try again.");
         window.location.href = "/";
       </script>`);
     }
@@ -207,11 +218,11 @@ router.post('/item/edit/:id', (req, res) => {
   db.query(sql, [name, sku, category_id, color, price, barcode, description, id], (err, result) => {
     if (err) {
       console.error(err);
-      return res.status(500).send('Failed to update item');
+      return res.status(500).send('Failed to update item.');
     }
     res.send(`
       <script>
-        alert("Successfully saved");
+        alert("Item updated successfully.");
         window.location.href = "/item/${id}";
       </script>
     `);
@@ -226,10 +237,10 @@ router.delete('/item/delete/:id', (req, res) => {
   db.query(sql, [id], (err, result) => {
     if (err) {
       console.error(err);
-      return res.status(500).json({ message: 'Failed to delete item' });
+      return res.status(500).json({ message: 'Failed to delete item.' });
     }
 
-      res.json({ message: 'Item deleted successfully' });
+      res.json({ message: 'Item deleted successfully.' });
     });
 });
 
@@ -296,9 +307,9 @@ router.delete('/category/delete/:id', (req, res) => {
   db.query('DELETE FROM categories WHERE id = ?', [id], (err, result) => {
     if (err) {
       console.error(err);
-      return res.json({ success: false });
+      return res.json({ success: false, message: "Failed to delete category." });
     }
-    res.json({ success: true });
+    res.json({ success: true, message: "Category deleted successfully." });
   });
 });
 
@@ -319,7 +330,7 @@ router.post('/add-category', (req, res) => {
 
     res.send(`
       <script>
-        alert("Category added successfully!");
+        alert("Category added successfully.");
         window.location.href = "/category";
       </script>
     `);
@@ -370,7 +381,7 @@ router.post('/category/edit/:id', (req, res) => {
 
     res.send(`
       <script>
-        alert("Category updated successfully!");
+        alert("Category updated successfully.");
         window.location.href = "/category";
       </script>
     `);
@@ -391,7 +402,7 @@ router.post('/item/:id/move', (req, res) => {
 
     res.send(`
       <script>
-        alert("Item moved successfully!");
+        alert("Item moved successfully.");
         window.location.href = "/category/edit/${oldCategoryId}";
       </script>
     `);
@@ -439,6 +450,11 @@ router.get("/search-barcode", (req, res) => {
 router.post('/inbound/:id', (req, res) => {
   const { amount } = req.body;
   const itemId = req.params.id;
+  const userId = req.session.user?.id; // get logged-in user id from session
+
+  if (!userId) {
+    return res.status(401).send("Unauthorized: Please log in");
+  }
 
   const sql = "UPDATE items SET quantity = quantity + ? WHERE id = ?";
   db.query(sql, [amount, itemId], (err) => {
@@ -446,7 +462,26 @@ router.post('/inbound/:id', (req, res) => {
       console.error("Inbound error:", err);
       return res.status(500).send("Database error");
     }
-    res.redirect(`/item/${itemId}`);
+
+    // get current quantity
+    db.query("SELECT quantity FROM items WHERE id = ?", [itemId], (err, result) => {
+      if (err) return res.status(500).send("Database error");
+
+      const currentQty = result[0].quantity;
+
+      // log to history
+      const sqlHistory = `
+        INSERT INTO history (item_id, user_id, action, amount, current_quantity)
+        VALUES (?, ?, 'inbound', ?, ?)
+      `;
+      db.query(sqlHistory, [itemId, userId, amount, currentQty], (err2) => {
+        if (err2) {
+          console.error("History insert error:", err2);
+        }
+
+      res.redirect(`/item/${itemId}`);
+      });
+    });
   });
 });
 
@@ -454,6 +489,11 @@ router.post('/inbound/:id', (req, res) => {
 router.post('/outbound/:id', (req, res) => {
   const itemId = req.params.id;
   const { amount } = req.body;
+  const userId = req.session.user?.id; // get logged-in user id from session
+
+  if (!userId) {
+    return res.status(401).send("Unauthorized: Please log in");
+  }
 
   const sql = `UPDATE items SET quantity = quantity - ? WHERE id = ? AND quantity >= ?`;
   db.query(sql, [amount, itemId, amount], (err, result) => {
@@ -463,19 +503,89 @@ router.post('/outbound/:id', (req, res) => {
       // Not enough stock
       return res.send(`
         <script>
-          alert("Not enough stock for outbound!");
+          alert("Not enough stock for outbound.");
           window.location.href = "/item/${itemId}";
         </script>
       `);
     }
 
-    // redirect to item detail page
-    res.redirect(`/item/${itemId}`);
+    // get current quantity
+    db.query("SELECT quantity FROM items WHERE id = ?", [itemId], (err, result) => {
+      if (err) return res.status(500).send("Database error");
+
+      const currentQty = result[0].quantity;
+
+      // log to history
+      const sqlHistory = `
+        INSERT INTO history (item_id, user_id, action, amount, current_quantity)
+        VALUES (?, ?, 'outbound', ?, ?)
+      `;
+      db.query(sqlHistory, [itemId, userId, amount, currentQty], (err2) => {
+        if (err2) {
+          console.error("History insert error:", err2);
+        }
+
+      // redirect to item detail page
+      res.redirect(`/item/${itemId}`);
+      });
+    });
   });
 });
 
 router.get('/history', (req, res) => {
-  res.render('history'); 
+  const userId = req.session.user?.id;
+  const { q, action, start_date, end_date } = req.query;
+
+  if (!userId) {
+    return res.status(401).send("Unauthorized: Please log in");
+  }
+
+  // Base query
+  let sql = `
+    SELECT h.id, i.name AS item_name, h.action, h.amount, h.current_quantity, h.created_at
+    FROM history h
+    JOIN items i ON h.item_id = i.id
+    WHERE h.user_id = ?
+  `;
+  let params = [userId];
+
+  // Search by item name
+  if (q) {
+    sql += " AND i.name LIKE ?";
+    params.push(`%${q}%`);
+  }
+
+  // Filter by action
+  if (action) {
+    sql += " AND h.action = ?";
+    params.push(action);
+  }
+
+  // Date range filter
+  if (start_date && end_date) {
+    sql += " AND DATE(h.created_at) BETWEEN ? AND ?";
+    params.push(start_date, end_date);
+  } else if (start_date) {
+    sql += " AND DATE(h.created_at) >= ?";
+    params.push(start_date);
+  } else if (end_date) {
+    sql += " AND DATE(h.created_at) <= ?";
+    params.push(end_date);
+  }
+
+  // Always order by date
+  sql += " ORDER BY h.created_at DESC";
+
+  db.query(sql, params, (err, results) => {
+    if (err) {
+      console.error("History fetch error:", err);
+      return res.status(500).send("Database error");
+    }
+
+    // Pass filters back so your EJS can pre-fill form inputs
+    res.render("history", { history: results, q, action, start_date, end_date });
+  });
 });
+
 
 module.exports = router;
