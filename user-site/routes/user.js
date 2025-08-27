@@ -1,16 +1,7 @@
 //app.js
 const express = require('express');
 const router = express.Router();
-const mysql = require('mysql2');
-require('dotenv').config();
-
-// MySQL connection
-const db = mysql.createConnection({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME
-});
+const db = require('../db');
 
 // Login POST route
 router.post('/login', async (req, res) => {
@@ -586,6 +577,5 @@ router.get('/history', (req, res) => {
     res.render("history", { history: results, q, action, start_date, end_date });
   });
 });
-
 
 module.exports = router;

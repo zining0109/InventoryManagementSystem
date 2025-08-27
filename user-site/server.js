@@ -5,11 +5,13 @@ const path = require('path');
 const session = require('express-session');
 
 const app = express();
+
+// Set EJS as templating engine
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
-app.use(express.urlencoded({ extended: false }));
-app.use(express.static(path.join(__dirname, 'public')));
 
+// Middleware
+app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: true })); 
 app.use(express.json());
 
@@ -19,9 +21,8 @@ app.use(session({
   saveUninitialized: true
 }));
 
+// Routes
 app.use('/', userRoutes); // Mounts routes/user.js at root
-
-app.use(express.static('public'));
 
 app.get('/', (req, res) => {
   res.render('login'); // If using EJS, or res.sendFile for HTML for views/login.ejs
