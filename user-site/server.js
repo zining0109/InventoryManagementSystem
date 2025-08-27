@@ -1,5 +1,4 @@
 const express = require('express');
-const bodyParser = require('body-parser');
 const userRoutes = require('./routes/user'); // path to routes/user.js
 const path = require('path');
 const session = require('express-session');
