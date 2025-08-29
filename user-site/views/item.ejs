@@ -45,9 +45,17 @@
     <h2 style="display: flex; align-items: center; gap: 10px;">
         Item 
         <form class="d-flex" method="GET" action="/item" style="margin-left: 55px;">
-          <input class="form-control me-2" type="search" name="q" placeholder="Search name..." aria-label="Search">
+          <input id="searchInput" class="form-control me-2" type="search" name="q" placeholder="Search name..." aria-label="Search">
           <button class="btn btn-outline-primary" type="submit"><i class="bi bi-search"></i></button>
         </form> 
+        <script>
+          const searchInput = document.getElementById("searchInput");
+          searchInput.addEventListener("search", () => {
+            if (!searchInput.value) {
+              window.location.href = "/inventory"; // reload full list
+            }
+          });
+        </script>
         <a href="/add-item"><i class="bi bi-plus-square fs-4" style="padding-left: 500px;"></i></a>
     </h2>
     </div>

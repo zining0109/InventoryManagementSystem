@@ -44,9 +44,17 @@
     <div class="container2">
       <h2 style="display: flex; align-items: center; gap: 10px;">History
         <form class="d-flex" method="GET" action="/history" style="margin-left: 22px;">
-          <input class="form-control me-2" type="search" name="q" placeholder="Search name..." aria-label="Search">
+          <input id="searchInput" class="form-control me-2" type="search" name="q" placeholder="Search name..." aria-label="Search">
           <button class="btn btn-outline-primary" type="submit"><i class="bi bi-search"></i></button>
         </form> 
+        <script>
+          const searchInput = document.getElementById("searchInput");
+          searchInput.addEventListener("search", () => {
+            if (!searchInput.value) {
+              window.location.href = "/inventory"; // reload full list
+            }
+          });
+        </script>
         <!-- Filter dropdown -->
         <div class="custom-dropdown" id="filterDropdown" style="margin-left: 450px;">
           <i class="bi bi-filter-circle-fill filter-icon" style="cursor: pointer;"></i>
