@@ -254,12 +254,15 @@ router.post("/add-item", (req, res) => {
     db.query(sql, [name, sku, category_id, color, quantity, price, barcode, description], (err, result) => {
         if (err) throw err;
         console.log("Item added:", result.insertId);
-        res.redirect("/item"); // redirect to item list page
+        res.send(`<script>
+          alert("Item added successfully.");
+          window.location.href = "/item";
+          </script>`); // redirect to item list page
     });
 });
 
 router.get('/category', (req, res) => {
-  const search = req.query.q ? `%${req.query.q}%` : null;
+  const search = req.query.q || null;
 
   let sql = `
     SELECT c.id, c.name, c.description, IFNULL(SUM(i.quantity), 0) AS total_quantity
@@ -273,9 +276,9 @@ router.get('/category', (req, res) => {
 
   sql += ` GROUP BY c.id, c.name, c.description`;
 
-  db.query(sql, search ? [search] : [], (err, results) => {
+  db.query(sql, search ? [`%${search}%`] : [], (err, results) => {
     if (err) return res.status(500).send(err);
-    res.render('category', { categories: results });
+    res.render('category', { categories: results, search });
   });
 });
 
@@ -469,8 +472,11 @@ router.post('/inbound/:id', (req, res) => {
         if (err2) {
           console.error("History insert error:", err2);
         }
-
-      res.redirect(`/item/${itemId}`);
+      
+      res.send(`<script>
+        alert("Inbound recorded successfully.");
+        window.location.href = "/item/${itemId}";
+        </script>`);
       });
     });
   });
@@ -516,8 +522,10 @@ router.post('/outbound/:id', (req, res) => {
           console.error("History insert error:", err2);
         }
 
-      // redirect to item detail page
-      res.redirect(`/item/${itemId}`);
+      res.send(`<script>
+        alert("Outbound recorded successfully.");
+        window.location.href = "/item/${itemId}";
+        </script>`);
       });
     });
   });
