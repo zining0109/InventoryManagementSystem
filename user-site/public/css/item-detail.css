@@ -10,6 +10,16 @@
   cursor: pointer;
 }
 
+.item-detail-table td {
+  padding: 10px;
+}
+
+.item-detail-table th {
+  text-align: left;
+  width: 180px;
+  padding: 10px;
+}
+
 .modal-overlay {
   display: none;
   position: fixed;

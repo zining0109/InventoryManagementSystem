@@ -71,15 +71,58 @@
         </script>
       </div>
     </div>
-    <p><strong>ID:</strong> <%= item.id %></p>
-    <p><strong>SKU:</strong> <%= item.sku %></p>
-    <p><strong>Category:</strong> <%= item.category_name || 'Uncategorized' %></p>
-    <p><strong>Color:</strong> <%= item.color %></p>
-    <p><strong>Quantity:</strong> <%= item.quantity %></p>
-    <p><strong>Price:</strong> RM <%= item.price %></p>
-    <p><strong>Barcode:</strong> <%= item.barcode %></p>
-    <p><strong>Description:</strong> <%= item.description %></p>
-    <p><strong>Created At:</strong> <%= item.created_at.toLocaleString() %></p>
+    <table class="table table-bordered item-detail-table">
+    <tbody>
+      <tr>
+        <th>ID</th>
+        <td><%= item.id %></td>
+      </tr>
+      <tr>
+        <th>SKU</th>
+        <td><%= item.sku %></td>
+      </tr>
+      <tr>
+        <th>Category</th>
+        <td><%= item.category_name || 'Uncategorized' %></td>
+      </tr>
+      <tr>
+        <th>Status</th>
+        <td>
+          <% if (item.status === "Low Stock") { %>
+            <span style="color: red;">Low Stock</span>
+          <% } else if (item.status === "Out of Stock") { %>
+            <span style="color: gray;">Out of Stock</span>
+          <% } else { %>
+            <span style="color: green;">In Stock</span>
+          <% } %>
+        </td>
+      </tr>
+      <tr>
+        <th>Color</th>
+        <td><%= item.color %></td>
+      </tr>
+      <tr>
+        <th>Quantity</th>
+        <td><%= item.quantity %></td>
+      </tr>
+      <tr>
+        <th>Price</th>
+        <td>RM <%= item.price %></td>
+      </tr>
+      <tr>
+        <th>Barcode</th>
+        <td><%= item.barcode %></td>
+      </tr>
+      <tr>
+        <th>Description</th>
+        <td><%= item.description %></td>
+      </tr>
+      <tr>
+        <th>Created At</th>
+        <td><%= item.created_at.toLocaleString() %></td>
+      </tr>
+    </tbody>
+    </table>
     </div>
     <!-- Inbound Modal -->
       <div id="inboundModal" class="modal-overlay">
