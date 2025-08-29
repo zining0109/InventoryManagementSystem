@@ -259,5 +259,73 @@ router.post("/edit-profile", (req, res) => {
     });
 });
 
+router.get('/inventory', (req, res) => {
+  const searchQuery = req.query.q;
+  let params = [];
+
+  let query = `
+    SELECT i.id, i.name, i.sku, i.color, i.quantity, i.price, i.barcode, i.description,
+           c.name AS category_name
+    FROM items i
+    LEFT JOIN categories c ON i.category_id = c.id
+  `;
+
+  if (searchQuery && searchQuery.trim() !== '') {
+    query += ' WHERE i.name LIKE ? OR c.name LIKE ?';
+    const searchTerm = `%${searchQuery.trim()}%`;
+    params = [searchTerm, searchTerm];
+  }
+
+  db.query(query, params, (err, results) => {
+    if (err) {
+      console.error('Error fetching items:', err);
+      return res.status(500).send('Server error');
+    }
+
+    // Add a low_stock flag
+    results = results.map(item => ({
+        ...item,
+        low_stock: item.quantity < 5 // threshold
+    }));
+
+    res.render('inventory', { items: results, search: searchQuery || '' });
+  });
+});
+
+router.get('/item/:id', (req, res) => {
+  const itemId = req.params.id;
+  const sql = `
+    SELECT i.*, c.name AS category_name
+    FROM items i
+    LEFT JOIN categories c ON i.category_id = c.id
+    WHERE i.id = ?
+  `;
+
+  db.query(sql, [itemId], (err, result) => {
+    if (err) {
+      console.error('Error fetching item:', err);
+      return res.status(500).send('Database error');
+    }
+    if (result.length === 0) {
+      return res.status(404).send('Item not found');
+    }
+
+    const item = result[0];
+
+    // Add status field dynamically
+    result.forEach(item => {
+      if (item.quantity === 0) {
+        item.status = "Out of Stock";
+      } else if (item.quantity < 5) {
+        item.status = "Low Stock";
+      } else {
+        item.status = "In Stock";
+      }
+    });
+
+    res.render('item-detail', { item: result[0] });
+  });
+});
+
 // Export router so server.js can use it
 module.exports = router;

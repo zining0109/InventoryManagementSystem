@@ -1,0 +1,15 @@
+.item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.item-detail-table td {
+  padding: 10px;
+}
+
+.item-detail-table th {
+  text-align: left;
+  width: 180px;
+  padding: 10px;
+}
