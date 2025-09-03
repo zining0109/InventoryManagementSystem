@@ -569,6 +569,65 @@ router.post('/user/edit/:id', (req, res) => {
   }); // end fetch current password
 });
 
+router.get('/history', (req, res) => {
+  const searchQuery = req.query.q;
+  const actionFilter = req.query.action;
+  const startDate = req.query.start_date;
+  const endDate = req.query.end_date;
+
+  let query = `
+    SELECT h.id, h.item_id, h.user_id, h.action, h.amount, h.current_quantity, h.created_at,
+           i.name AS item_name, u.name AS user_name
+    FROM history h
+    LEFT JOIN items i ON h.item_id = i.id
+    LEFT JOIN users u ON h.user_id = u.id
+    WHERE 1=1
+  `;
+  let params = [];
+
+  // Search filter (item or user name)
+  if (searchQuery && searchQuery.trim() !== '') {
+    query += ` AND (i.name LIKE ? OR u.name LIKE ?)`;
+    const term = `%${searchQuery.trim()}%`;
+    params.push(term, term);
+  }
+
+  // Action filter (inbound/outbound)
+  if (actionFilter && actionFilter.trim() !== '') {
+    query += ` AND h.action = ?`;
+    params.push(actionFilter);
+  }
+
+  // Date filter
+  if (startDate && endDate) {
+    query += ` AND DATE(h.created_at) BETWEEN ? AND ?`;
+    params.push(startDate, endDate);
+  } else if (startDate) {
+    query += ` AND DATE(h.created_at) >= ?`;
+    params.push(startDate);
+  } else if (endDate) {
+    query += ` AND DATE(h.created_at) <= ?`;
+    params.push(endDate);
+  }
+
+  query += ` ORDER BY h.created_at DESC`;
+
+  db.query(query, params, (err, results) => {
+    if (err) {
+      console.error("Error fetching history:", err);
+      return res.status(500).send("Server error");
+    }
+
+    res.render("history", {
+      history: results,
+      search: searchQuery || '',
+      action: actionFilter || '',
+      start_date: startDate || '',
+      end_date: endDate || ''
+    });
+  });
+});
+
 
 // Export router so server.js can use it
 module.exports = router;
