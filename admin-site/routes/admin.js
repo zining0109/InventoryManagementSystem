@@ -327,5 +327,248 @@ router.get('/item/:id', (req, res) => {
   });
 });
 
+router.get('/user', (req, res) => {
+  const searchQuery = req.query.q;
+  const roleFilter = req.query.role; // get role from query params
+  let params = [];
+
+  let query = `
+    SELECT id, work_id, name, username, email, role, gender, age, contact_no
+    FROM users
+    WHERE role <> 'manager'
+  `;
+
+  if (searchQuery && searchQuery.trim() !== '') {
+    query += ' AND (name LIKE ? OR username LIKE ? OR email LIKE ? OR role LIKE ?)';
+    const searchTerm = `%${searchQuery.trim()}%`;
+    params = [searchTerm, searchTerm, searchTerm, searchTerm];
+  }
+
+  // Role filter
+  if (roleFilter && roleFilter.trim() !== '') {
+    query += ' AND role = ?';
+    params.push(roleFilter);
+  }
+
+  db.query(query, params, (err, results) => {
+    if (err) {
+      console.error('Error fetching users:', err);
+      return res.status(500).send('Server error');
+    }
+
+    res.render('user', { users: results, search: searchQuery || '', roleFilter: roleFilter || ''});
+  });
+});
+
+router.get('/add-user', (req, res) => {
+  res.render('add-user'); // Render add-user.ejs
+});
+
+// Add User Route with Validation + Separate alerts
+router.post('/add-user', (req, res) => {
+  const { work_id, name, id_no, username, password, confirmPassword, email, role, gender, age, contact_no } = req.body;
+
+  // Validate Work ID format
+  let validWorkId = false;
+  if (role === 'warehouse staff' && /^B\d{3}$/.test(work_id)) {
+    validWorkId = true;
+  } else if (role === 'user' && /^C\d{3}$/.test(work_id)) {
+    validWorkId = true;
+  }
+
+  if (!validWorkId) {
+    return res.send(`<script>alert("Invalid Work ID. Warehouse staff IDs must be Bxxx, Cashier IDs must be Cxxx."); window.location.href='/add-user';</script>`);
+  }
+
+  // Validate password confirmation
+  if (password !== confirmPassword) {
+    return res.send(`<script>alert("Passwords do not match. Please enter again."); window.location.href='/add-user';</script>`);
+  }
+
+  // Check if username already exists
+  const checkUsername = 'SELECT id FROM users WHERE username = ? LIMIT 1';
+  db.query(checkUsername, [username], (err, usernameResult) => {
+    if (err) {
+      console.error('Error checking username:', err);
+      return res.status(500).send('Server error');
+    }
+
+    if (usernameResult.length > 0) {
+      return res.send(`<script>alert("Username already exists. Please assign another username."); window.location.href='/add-user';</script>`);
+    }
+
+    // Check if work_id already exists
+    const checkWorkId = 'SELECT id FROM users WHERE work_id = ? LIMIT 1';
+    db.query(checkWorkId, [work_id], (err, workIdResult) => {
+      if (err) {
+        console.error('Error checking work ID:', err);
+        return res.status(500).send('Server error');
+      }
+
+      if (workIdResult.length > 0) {
+        return res.send(`<script>alert("Work ID already exists. Please assign another Work ID."); window.location.href='/add-user';</script>`);
+      }
+
+      // Insert user if all validation passed
+      const insertQuery = `
+        INSERT INTO users (work_id, name, id_no, username, password, email, role, gender, age, contact_no)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `;
+      db.query(insertQuery, [work_id, name, id_no, username, password, email, role, gender, age, contact_no], (err, result) => {
+        if (err) {
+          console.error('Error inserting user:', err);
+          return res.send(`<script>alert("Failed to add user."); window.location.href='/user';</script>`);
+        }
+
+        console.log('User added:', result.insertId);
+        res.send(`<script>alert("User added successfully."); window.location.href='/user';</script>`);
+      });
+    });
+  });
+});
+
+// User detail route
+router.get('/user/:id', (req, res) => {
+  const userId = req.params.id;
+  const sql = `
+    SELECT *
+    FROM users
+    WHERE id = ?
+  `;
+
+  db.query(sql, [userId], (err, result) => {
+    if (err) {
+      console.error('Error fetching user:', err);
+      return res.status(500).send('Database error');
+    }
+    if (result.length === 0) {
+      return res.status(404).send('User not found');
+    }
+
+    res.render('user-detail', { user: result[0] });
+  });
+});
+
+router.delete('/user/delete/:id', (req, res) => {
+  const id = req.params.id;
+  
+  const sql = 'DELETE FROM users WHERE id = ?';
+  db.query(sql, [id], (err, result) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ message: 'Failed to delete user.' });
+    }
+
+      res.json({ message: 'User deleted successfully.' });
+    });
+});
+
+router.get('/user/edit/:id', (req, res) => {
+  const userId = req.params.id;
+
+  // Available roles (excluding manager if you want)
+  const roles = ["Warehouse Staff", "Store Cashier"];
+
+  const sql = `SELECT * FROM users WHERE id = ?`;
+  db.query(sql, [userId], (err, result) => {
+    if (err) return res.status(500).send('Database error');
+    if (result.length === 0) return res.status(404).send('User not found');
+
+    res.render('edit-user', { user: result[0], roles });
+  });
+});
+
+router.post('/user/edit/:id', (req, res) => {
+  const userId = req.params.id;
+  const {
+    work_id,
+    name,
+    username,
+    password,
+    confirmPassword,
+    email,
+    role,
+    gender,
+    age,
+    contact_no
+  } = req.body;
+
+  // Validate Work ID format
+  const normalizedRole = role.toLowerCase();
+  let validWorkId = false;
+  if (normalizedRole === 'warehouse staff' && /^B\d{3}$/.test(work_id)) validWorkId = true;
+  else if (normalizedRole === 'store cashier' && /^C\d{3}$/.test(work_id)) validWorkId = true;
+
+  if (!validWorkId) {
+    return res.send(`<script>alert("Invalid Work ID. Warehouse staff IDs must be Bxxx, Cashier IDs must be Cxxx."); window.history.back();</script>`);
+  }
+
+  // Step 1: fetch current password from DB
+  db.query('SELECT password FROM users WHERE id = ?', [userId], (err, result) => {
+    if (err) {
+      console.error('Error fetching user password:', err);
+      return res.status(500).send('Server error');
+    }
+
+    if (result.length === 0) {
+      return res.status(404).send('User not found');
+    }
+
+    const userCurrentPassword = result[0].password;
+
+    // Step 2: validate password only if changed
+    if (password && password !== userCurrentPassword) {
+      if (!confirmPassword || password !== confirmPassword) {
+        return res.send(`<script>alert("Passwords do not match."); window.history.back();</script>`);
+      }
+    }
+
+    // Step 3: check if username already exists (excluding current user)
+    const checkUsername = 'SELECT id FROM users WHERE username = ? AND id <> ? LIMIT 1';
+    db.query(checkUsername, [username, userId], (err, usernameResult) => {
+      if (err) return res.status(500).send('Server error');
+      if (usernameResult.length > 0) {
+        return res.send(`<script>alert("Username already exists."); window.history.back();</script>`);
+      }
+
+      // Step 4: check if work_id already exists (excluding current user)
+      const checkWorkId = 'SELECT id FROM users WHERE work_id = ? AND id <> ? LIMIT 1';
+      db.query(checkWorkId, [work_id, userId], (err, workIdResult) => {
+        if (err) return res.status(500).send('Server error');
+        if (workIdResult.length > 0) {
+          return res.send(`<script>alert("Work ID already exists."); window.history.back();</script>`);
+        }
+
+        // Step 5: update user (conditionally update password)
+        let sql, params;
+        if (password && password !== userCurrentPassword) {
+          // update with new password
+          sql = `
+            UPDATE users SET
+              work_id=?, name=?, username=?, password=?, email=?, role=?, gender=?, age=?, contact_no=?
+            WHERE id=?
+          `;
+          params = [work_id, name, username, password, email, role, gender, age, contact_no, userId];
+        } else {
+          // update without changing password
+          sql = `
+            UPDATE users SET
+              work_id=?, name=?, username=?, email=?, role=?, gender=?, age=?, contact_no=?
+            WHERE id=?
+          `;
+          params = [work_id, name, username, email, role, gender, age, contact_no, userId];
+        }
+
+        db.query(sql, params, (err, result) => {
+          if (err) return res.status(500).send('Database error');
+          res.send(`<script>alert("User updated successfully."); window.location.href='/user/${userId}';</script>`);
+        });
+
+      }); // end checkWorkId
+    }); // end checkUsername
+  }); // end fetch current password
+});
+
+
 // Export router so server.js can use it
 module.exports = router;

@@ -1,0 +1,81 @@
+.container3 {
+    padding-top: 18px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* Label column, Input column */
+  gap: 20px 20px; /* Row gap, column gap */
+  max-width: 800px;
+}
+
+.form-grid label {
+  padding-top: 10px;
+}
+
+.form-grid input {
+  width: 100%;
+  height: 30px;
+  border-radius: 5px;
+  box-sizing: border-box;
+  border: 1px solid rgba(0, 0, 0, 0.3);
+  margin-top: 15px;
+}
+
+.form-grid input:focus {
+  border-color: rgba(0, 0, 0, 0.6); /* Slightly darker on focus */
+  outline: none;
+}
+
+.form-grid select {
+  width: 100%;
+  height: 30px;
+  border-radius: 5px;
+  box-sizing: border-box;
+  border: 1px solid rgba(0, 0, 0, 0.3);
+  margin-top: 15px;
+}
+
+.form-group {
+  display: grid;
+  grid-template-columns: 150px 1fr; /* label fixed, input flexible */
+  align-items: center;
+  row-gap: 15px;
+}
+
+.form-group label {
+  display: block;
+  margin-top: 10px;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  height: 30px;
+  border-radius: 5px;
+  border: 1px solid rgba(0, 0, 0, 0.3);
+  box-sizing: border-box;
+}
+
+.button-group {
+    margin-top: 20px;
+}
+
+.btn1 {
+    width: 55px;
+    height: 28px;
+    background-color: #0078D7;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.btn2 {
+    width: 65px;
+    height: 28px;
+    margin-left: 12px;
+    border-radius: 5px;
+    border: none;
+    cursor: pointer;
+}

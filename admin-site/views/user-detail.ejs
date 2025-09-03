@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Detail</title>
+    <link rel="stylesheet" href="/css/user-detail.css">
+    <link rel="stylesheet" href="/css/menu.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+<body>
+  <!-- Sidebar -->
+  <div id="sidebar" class="sidebar">
+    <div class="menu">
+      <ul>
+        <li><a href="/home"><i class="bi bi-house"></i> Dashboard</a></li>
+        <li><a href="/inventory"><i class="bi bi-boxes"></i> Inventory</a></li> 
+        <li><a href="/user"><i class="bi bi-people"></i> User</a></li>
+        <li><a href="/report"><i class="bi bi-bar-chart-line"></i> Report</a></li>
+        <li><a href="/history"><i class="bi bi-clock-history"></i> History</a></li>
+      </ul>
+    </div>
+    <div class="logout">
+      <ul>
+        <li><a href="/login"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="content">
+    <div class="container1">
+      <h1>Inventory Management System <a href="/profile"><i class="bi bi-person-circle"></i></a></h1>
+    </div>
+    <hr>
+    <div class="container2">
+      <h2><a href="/user"><i class="bi bi-arrow-left-circle"></i></a> User Detail</h2>
+    </div>
+    <hr>
+    <div class="user-header">
+      <h3><%= user.name %></h3>
+        <div class="user-actions">
+          <a href="/user/edit/<%= user.id %>"><i class="bi bi-pencil-square"></i></a>
+          <a href="#" onclick="confirmDelete('<%= user.id %>')"><i class="bi bi-trash3"></i></a>
+          <script>
+            function confirmDelete(id) {
+              if (confirm("Are you sure you want to delete this user?")) {
+                fetch(`/user/delete/${id}`, {
+                method: 'DELETE'
+              })
+              .then(res => res.json())
+              .then(data => {
+              alert(data.message);
+              window.location.href = '/user'; // redirect after deletion
+              })
+              .catch(err => console.error(err));
+              }
+            }
+          </script>
+        </div>
+    </div>
+    <table class="table table-bordered user-detail-table">
+    <tbody>
+      <tr>
+        <th>ID</th>
+        <td><%= user.id %></td>
+      </tr>
+      <tr>
+        <th>Work ID</th>
+        <td><%= user.work_id %></td>
+      </tr>
+      <tr>
+        <th>Name</th>
+        <td><%= user.name %></td>
+      </tr>
+      <tr>
+        <th>Identity No</th>
+        <td><%= user.id_no %></td>
+      </tr>
+      <tr>
+        <th>Username</th>
+        <td><%= user.username %></td>
+      </tr>
+      <tr>
+        <th>Password</th>
+        <td><%= user.password %></td>
+      </tr>
+      <tr>
+        <th>Email</th>
+        <td><%= user.email %></td>
+      </tr>
+      <tr>
+        <th>Role</th>
+        <td><%= user.role %></td>
+      </tr>
+      <tr>
+        <th>Gender</th>
+        <td><%= user.gender %></td>
+      </tr>
+      <tr>
+        <th>Age</th>
+        <td><%= user.age %></td>
+      </tr>
+      <tr>
+        <th>Contact No</th>
+        <td><%= user.contact_no %></td>
+      </tr>
+    </tbody>
+    </table>
+  </div>
+</body>
+</html>
