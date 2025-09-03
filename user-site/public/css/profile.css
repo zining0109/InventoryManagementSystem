@@ -1,0 +1,9 @@
+.user-detail-table td {
+  padding: 10px;
+}
+
+.user-detail-table th {
+  text-align: left;
+  width: 180px;
+  padding: 10px;
+}
