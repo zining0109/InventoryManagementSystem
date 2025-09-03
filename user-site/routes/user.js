@@ -163,7 +163,6 @@ router.get('/item/:id', (req, res) => {
   });
 });
 
-
 // Show edit form
 router.get('/item/edit/:id', (req, res) => {
   const id = req.params.id;
