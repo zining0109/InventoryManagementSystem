@@ -449,18 +449,38 @@ router.get('/user/:id', (req, res) => {
   });
 });
 
-router.delete('/user/delete/:id', (req, res) => {
+// Delete user route
+router.get('/user/delete/:id', (req, res) => {
   const id = req.params.id;
-  
+
   const sql = 'DELETE FROM users WHERE id = ?';
   db.query(sql, [id], (err, result) => {
     if (err) {
       console.error(err);
-      return res.status(500).json({ message: 'Failed to delete user.' });
+      return res.send(`
+        <script>
+          alert("Failed to delete user.");
+          window.location.href = "/user";
+        </script>
+      `);
     }
 
-      res.json({ message: 'User deleted successfully.' });
-    });
+    if (result.affectedRows === 0) {
+      return res.send(`
+        <script>
+          alert("User not found.");
+          window.location.href = "/user";
+        </script>
+      `);
+    }
+
+    res.send(`
+      <script>
+        alert("User deleted successfully.");
+        window.location.href = "/user";
+      </script>
+    `);
+  });
 });
 
 router.get('/user/edit/:id', (req, res) => {
