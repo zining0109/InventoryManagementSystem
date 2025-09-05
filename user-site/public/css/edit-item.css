@@ -4,9 +4,24 @@
 
 .form-grid {
   display: grid;
-  grid-template-columns: 150px auto; /* Label column, Input column */
-  gap: 20px 20px; /* Row gap, column gap */
+  grid-template-columns: 150px 1fr;
+  gap: 12px 20px;
   max-width: 400px;
+  align-items: center;
+}
+
+.row-flex {
+  display: flex;
+  gap: 40px;
+  margin-bottom: 24px;
+}
+.form-group label {
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+.form-group input[type="text"],
+.form-group input[type="file"] {
+  width: 100%;
 }
 
 .form-grid label {
@@ -40,6 +55,10 @@
   border-radius: 5px;
   box-sizing: border-box;
   border: 1px solid rgba(0, 0, 0, 0.3);
+}
+
+.form-grid img {
+  max-width: 150px;
 }
 
 .button-group {

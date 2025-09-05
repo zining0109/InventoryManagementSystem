@@ -48,43 +48,43 @@
     </div>
     <hr>
     <div class="container3">
-        <form id="editForm" action="/item/edit/<%= item.id %>" method="POST" class="form-grid">
-            <label>Name</label>
-            <input type="text" name="name" value="<%= item.name %>" required>
+     <form id="editForm" action="/item/edit/<%= item.id %>" method="POST" enctype="multipart/form-data" class="form-grid">
+      <label>Name</label>
+      <input type="text" name="name" value="<%= item.name %>" required>
 
-            <label for="sku">SKU</label>
-            <input type="text" name="sku" value="<%= item.sku %>" required>
+    <label for="sku">SKU</label>
+    <input type="text" name="sku" value="<%= item.sku %>" required>
 
-           <label for="category_id">Category</label>    
-           <select name="category_id" required>
-            <% categories.forEach(function(cat) { %>
-            <option value="<%= cat.id %>" <%= item.category_id === cat.id ? "selected" : "" %>>
-            <%= cat.name %>
-            </option>
-            <% }) %>
-           </select>
+    <label for="category_id">Category</label>
+    <select name="category_id" required>
+      <% categories.forEach(function(cat) { %>
+        <option value="<%= cat.id %>" <%= item.category_id === cat.id ? "selected" : "" %>>
+          <%= cat.name %>
+        </option>
+      <% }) %>
+    </select>
 
-            <label for="color">Color</label>
-            <input type="text" name="color" value="<%= item.color %>" required>
+    <label for="color">Color</label>
+    <input type="text" name="color" value="<%= item.color %>" required>
 
-            <label for="quantity" style="margin-top: 6px;">Quantity</label>
-            <p><%= item.quantity %></p>
+    <label for="quantity">Quantity</label>
+    <p><%= item.quantity %></p>
 
-            <label>Price</label>
-            <input type="number" step="0.01" name="price" value="<%= item.price %>" required>
+    <label>Price</label>
+    <input type="number" step="0.01" name="price" value="<%= item.price %>" required>
 
-            <label for="barcode">Barcode</label>
-            <input type="text" name="barcode" value="<%= item.barcode %>" required>
+    <label for="barcode">Barcode</label>
+    <input type="text" name="barcode" value="<%= item.barcode %>" required>
 
-            <label>Description</label>
-            <textarea name="description" required><%= item.description %></textarea>
-            
-            <div class="button-group">
-                <button type="submit" class="btn1">Save</button>
-                <button type="button" onclick="window.location.href='/item/<%= item.id %>'" class="btn2">Cancel</button>
-            </div>
-        </form>
+    <label>Description</label>
+    <textarea name="description" required><%= item.description %></textarea>
+
+    <div class="button-group">
+      <button type="submit" class="btn1">Save</button>
+      <button type="button" onclick="window.location.href='/item/<%= item.id %>'" class="btn2">Cancel</button>
     </div>
+   </form>
+   </div>
   </div>
 </body>
 </html>

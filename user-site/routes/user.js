@@ -2,6 +2,8 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const multer = require("multer");
+const path = require("path");
 
 // Login POST route
 router.post('/login', async (req, res) => {
@@ -114,6 +116,29 @@ router.get('/profile', (req, res) => {
   });
 });
 
+// Configure storage
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, path.join(__dirname, "../uploads/items")); // folder for uploads
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + path.extname(file.originalname)); // unique filename
+  }
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
+  fileFilter: (req, file, cb) => {
+    const fileTypes = /jpeg|jpg|png|gif/;
+    const extname = fileTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = fileTypes.test(file.mimetype);
+
+    if (mimetype && extname) cb(null, true);
+    else cb("Please upload images.");
+  },
+});
+ 
 router.get('/item', (req, res) => {
   const searchQuery = req.query.q;
   let params = [];
@@ -164,51 +189,62 @@ router.get('/item/:id', (req, res) => {
 });
 
 // Show edit form
-router.get('/item/edit/:id', (req, res) => {
+router.get("/item/edit/:id", (req, res) => {
   const id = req.params.id;
 
-  const itemSql = 'SELECT * FROM items WHERE id = ?';
-  const categorySql = 'SELECT * FROM categories';
+  const itemSql = "SELECT * FROM items WHERE id = ?";
+  const categorySql = "SELECT * FROM categories";
 
   db.query(itemSql, [id], (err, itemResults) => {
     if (err) {
       console.error(err);
-      return res.status(500).send('Database error');
+      return res.status(500).send("Database error");
     }
     if (itemResults.length === 0) {
-      return res.status(404).send('Item not found');
+      return res.status(404).send("Item not found");
     }
 
     db.query(categorySql, (err, categoryResults) => {
       if (err) {
         console.error(err);
-        return res.status(500).send('Database error');
+        return res.status(500).send("Database error");
       }
 
-      res.render('edit-item', {
+      res.render("edit-item", {
         item: itemResults[0],
-        categories: categoryResults
+        categories: categoryResults,
       });
     });
   });
 });
 
-
 // Handle form submission
-router.post('/item/edit/:id', (req, res) => {
+router.post("/item/edit/:id", upload.single("image"), (req, res) => {
   const id = req.params.id;
   const { name, sku, category_id, color, price, barcode, description } = req.body;
+
+  // If new image uploaded → replace; else keep old
+  let imageQuery = "";
+  let params = [name, sku, category_id, color, price, barcode, description];
+
+  if (req.file) {
+    imageQuery = ", image = ?";
+    params.push(req.file.filename); //store URL path
+  }
+
+  params.push(id);
 
   const sql = `
     UPDATE items 
     SET name = ?, sku = ?, category_id = ?, color = ?, price = ?, barcode = ?, description = ?
+    ${imageQuery}
     WHERE id = ?
   `;
 
-  db.query(sql, [name, sku, category_id, color, price, barcode, description, id], (err, result) => {
+  db.query(sql, params, (err, result) => {
     if (err) {
       console.error(err);
-      return res.status(500).send('Failed to update item.');
+      return res.status(500).send("Failed to update item.");
     }
     res.send(`
       <script>
@@ -243,21 +279,22 @@ router.get('/add-item', (req, res) => {
 });
 
 // Add item POST route
-router.post("/add-item", (req, res) => {
-    const { name, sku, category_id, color, quantity, price, barcode, description } = req.body;
+router.post("/add-item", upload.single("image"), (req, res) => {
+  const { name, sku, category_id, color, quantity, price, barcode, description } = req.body;
 
-    const sql = `
-        INSERT INTO items (name, sku, category_id, color, quantity, price, barcode, description)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `;
-    db.query(sql, [name, sku, category_id, color, quantity, price, barcode, description], (err, result) => {
-        if (err) throw err;
-        console.log("Item added:", result.insertId);
-        res.send(`<script>
-          alert("Item added successfully.");
-          window.location.href = "/item";
-          </script>`); // redirect to item list page
-    });
+  const image = req.file
+    ? req.file.filename 
+    : "default.png"; // store path, not just filename
+
+  const sql = `
+    INSERT INTO items (name, sku, category_id, color, quantity, price, barcode, description, image)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `;
+
+  db.query(sql, [name, sku, category_id, color, quantity, price, barcode, description, image], (err, result) => {
+    if (err) throw err;
+    res.send(`<script>alert("Item added successfully."); window.location.href="/item";</script>`);
+  });
 });
 
 router.get('/category', (req, res) => {
@@ -581,7 +618,7 @@ router.get('/history', (req, res) => {
     }
 
     // Pass filters back so your EJS can pre-fill form inputs
-    res.render("history", { history: results, q, action, start_date, end_date });
+    res.render("history", { history: results, search: q || "", action, start_date, end_date });
   });
 });
 

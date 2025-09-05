@@ -19,6 +19,9 @@ app.use(session({
   saveUninitialized: true
 }));
 
+// Serve static files from uploads directory
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
 // Routes
 app.use('/', userRoutes); // Mounts routes/user.js at root
 
