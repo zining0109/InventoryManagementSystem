@@ -19,6 +19,9 @@ app.use(session({
   saveUninitialized: false
 }));
 
+// Serve static files from uploads directory
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
 // Routes
 app.use("/", adminRoutes);
 
