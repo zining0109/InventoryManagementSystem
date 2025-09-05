@@ -157,6 +157,7 @@
           </td>
           <td>
             <button onclick="window.location.href='/category/edit/<%= cat.id %>'" class="btn1">Edit</button>
+            <button onclick="confirmDelete(<%= cat.id %>, <%= cat.total_quantity %>)" class="btn2">Delete</button>
           </td>
         </tr>
         <tr><td colspan="6"><hr></td></tr> <!-- Line between items -->
@@ -166,5 +167,17 @@
     </table>
     </div>
   </div>
+<script>
+  function confirmDelete(categoryId, itemCount) {
+    if (itemCount > 0) {
+      alert("This category cannot be deleted because it still has items.");
+      return;
+    }
+
+    if (confirm('Are you sure you want to delete this category?')) {
+      window.location.href = '/category/delete/' + categoryId;
+    }
+  }
+</script>
 </body>
 </html>

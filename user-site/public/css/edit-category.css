@@ -21,7 +21,16 @@
   border: 1px solid rgba(0, 0, 0, 0.3);
 }
 
-.form-grid input:focus {
+.form-grid textarea {
+  width: 100%;
+  border-radius: 5px;
+  box-sizing: border-box;
+  border: 1px solid rgba(0, 0, 0, 0.3);
+}
+
+
+.form-grid input:focus,
+.form-grid textarea:focus {
   border-color: rgba(0, 0, 0, 0.6); /* Slightly darker on focus */
   outline: none;
 }
@@ -80,13 +89,6 @@
   width: 55px;
   height: 28px;
   border-radius: 5px;
-  cursor: pointer;
-}
-
-.actions i {
-  padding-left:95%;
-  font-size: 1.2rem;
-  margin-left: 8px;
   cursor: pointer;
 }
 

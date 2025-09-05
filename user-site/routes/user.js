@@ -255,19 +255,38 @@ router.post("/item/edit/:id", upload.single("image"), (req, res) => {
   });
 });
 
-// Delete item POST route
-router.delete('/item/delete/:id', (req, res) => {
+// Delete item route
+router.get('/item/delete/:id', (req, res) => {
   const id = req.params.id;
-  
+
   const sql = 'DELETE FROM items WHERE id = ?';
   db.query(sql, [id], (err, result) => {
     if (err) {
       console.error(err);
-      return res.status(500).json({ message: 'Failed to delete item.' });
+      return res.send(`
+        <script>
+          alert("Failed to delete item.");
+          window.location.href = "/item";
+        </script>
+      `);
     }
 
-      res.json({ message: 'Item deleted successfully.' });
-    });
+    if (result.affectedRows === 0) {
+      return res.send(`
+        <script>
+          alert("Item not found.");
+          window.location.href = "/item";
+        </script>
+      `);
+    }
+
+    res.send(`
+      <script>
+        alert("Item deleted successfully.");
+        window.location.href = "/item";
+      </script>
+    `);
+  });
 });
 
 router.get('/add-item', (req, res) => {
@@ -332,14 +351,35 @@ router.get('/category/:id/items', (req, res) => {
   });
 });
 
-router.delete('/category/delete/:id', (req, res) => {
+router.get('/category/delete/:id', (req, res) => {
   const id = req.params.id;
+
   db.query('DELETE FROM categories WHERE id = ?', [id], (err, result) => {
     if (err) {
       console.error(err);
-      return res.json({ success: false, message: "Failed to delete category." });
+      return res.send(`
+        <script>
+          alert("Failed to delete category.");
+          window.location.href = "/category";
+        </script>
+      `);
     }
-    res.json({ success: true, message: "Category deleted successfully." });
+
+    if (result.affectedRows === 0) {
+      return res.send(`
+        <script>
+          alert("Category not found.");
+          window.location.href = "/category";
+        </script>
+      `);
+    }
+
+    res.send(`
+      <script>
+        alert("Category deleted successfully.");
+        window.location.href = "/category";
+      </script>
+    `);
   });
 });
 

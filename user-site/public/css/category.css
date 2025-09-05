@@ -33,3 +33,13 @@ button {
     border-radius: 5px;
     cursor: pointer;
 }
+
+.btn2 {
+    width: 55px;
+    height: 28px;
+    background-color: red;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}

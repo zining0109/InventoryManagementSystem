@@ -20,6 +20,20 @@
   padding: 10px;
 }
 
+.item-detail-container {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start; /* aligns top */
+}
+
+.item-image img {
+  max-width: 250px;
+}
+
+.item-info {
+  flex: 1; /* table takes remaining space */
+}
+
 .modal-overlay {
   display: none;
   position: fixed;
