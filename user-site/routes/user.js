@@ -116,6 +116,48 @@ router.get('/profile', (req, res) => {
   });
 });
 
+router.get('/edit-profile', (req, res) => {
+  res.render('edit-profile'); // Renders views/login.ejs
+});
+
+// Show edit profile form
+router.get('/edit-profile', (req, res) => {
+  const username = req.session.username;
+  if (username) {
+    return res.redirect('/login');
+  }
+  db.query('SELECT * FROM users WHERE id = ?', [userId], (err, results) => {
+    if (err || results.length === 0) {
+      return res.send('User not found');
+    }
+    res.render('edit-profile', { user: results[0] });
+  });
+});
+
+// Handle edit profile submission
+router.post('/edit-profile', (req, res) => {
+  const username = req.session.username;
+  if (!username) {
+    return res.redirect('/login');
+  }
+  const { name, id_no, gender, age, contact_no } = req.body;
+  db.query(
+    'UPDATE users SET name = ?, id_no = ?, gender = ?, age = ?, contact_no = ? WHERE username = ?',
+    [name, id_no, gender, age, contact_no, username],
+    (err, result) => {
+      if (err) {
+        return res.send('Failed to update profile');
+      }
+      res.send(`
+      <script>
+        alert("Profile updated successfully.");
+        window.location.href = "/profile";
+      </script>
+    `);
+    }
+  );
+});
+
 // Configure storage
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -223,35 +265,69 @@ router.post("/item/edit/:id", upload.single("image"), (req, res) => {
   const id = req.params.id;
   const { name, sku, category_id, color, price, barcode, description } = req.body;
 
-  // If new image uploaded → replace; else keep old
-  let imageQuery = "";
-  let params = [name, sku, category_id, color, price, barcode, description];
-
-  if (req.file) {
-    imageQuery = ", image = ?";
-    params.push(req.file.filename); //store URL path
-  }
-
-  params.push(id);
-
-  const sql = `
-    UPDATE items 
-    SET name = ?, sku = ?, category_id = ?, color = ?, price = ?, barcode = ?, description = ?
-    ${imageQuery}
-    WHERE id = ?
-  `;
-
-  db.query(sql, params, (err, result) => {
+  // 1. Check if SKU already exists for another item
+  const checkSkuSql = "SELECT id FROM items WHERE sku = ? AND id <> ?";
+  db.query(checkSkuSql, [sku, id], (err, skuResults) => {
     if (err) {
       console.error(err);
-      return res.status(500).send("Failed to update item.");
+      return res.status(500).send("Database error");
     }
-    res.send(`
-      <script>
-        alert("Item updated successfully.");
-        window.location.href = "/item/${id}";
-      </script>
-    `);
+    if (skuResults.length > 0) {
+      return res.send(`
+        <script>
+          alert("SKU already exists. Please use another SKU.");
+          window.history.back();
+        </script>
+      `);
+    }
+
+    // 2. Check if Barcode already exists for another item
+    const checkBarcodeSql = "SELECT id FROM items WHERE barcode = ? AND id <> ?";
+    db.query(checkBarcodeSql, [barcode, id], (err, barcodeResults) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).send("Database error");
+      }
+      if (barcodeResults.length > 0) {
+        return res.send(`
+          <script>
+            alert("Barcode already exists. Please use another Barcode.");
+            window.history.back();
+          </script>
+        `);
+      }
+
+      // 3. If passed validation → proceed with update
+      let imageQuery = "";
+      let params = [name, sku, category_id, color, price, barcode, description];
+
+      if (req.file) {
+        imageQuery = ", image = ?";
+        params.push(req.file.filename);
+      }
+
+      params.push(id);
+
+      const sql = `
+        UPDATE items 
+        SET name = ?, sku = ?, category_id = ?, color = ?, price = ?, barcode = ?, description = ?
+        ${imageQuery}
+        WHERE id = ?
+      `;
+
+      db.query(sql, params, (err, result) => {
+        if (err) {
+          console.error(err);
+          return res.status(500).send("Failed to update item.");
+        }
+        res.send(`
+          <script>
+            alert("Item updated successfully.");
+            window.location.href = "/item/${id}";
+          </script>
+        `);
+      });
+    });
   });
 });
 
@@ -301,18 +377,60 @@ router.get('/add-item', (req, res) => {
 router.post("/add-item", upload.single("image"), (req, res) => {
   const { name, sku, category_id, color, quantity, price, barcode, description } = req.body;
 
-  const image = req.file
-    ? req.file.filename 
-    : "default.png"; // store path, not just filename
+  const image = req.file ? req.file.filename : "default.png";
 
-  const sql = `
-    INSERT INTO items (name, sku, category_id, color, quantity, price, barcode, description, image)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `;
+  // 1. Check if SKU already exists
+  const checkSkuSql = "SELECT id FROM items WHERE sku = ?";
+  db.query(checkSkuSql, [sku], (err, skuResults) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).send("Database error");
+    }
+    if (skuResults.length > 0) {
+      return res.send(`
+        <script>
+          alert("SKU already exists. Please use another SKU.");
+          window.history.back();
+        </script>
+      `);
+    }
 
-  db.query(sql, [name, sku, category_id, color, quantity, price, barcode, description, image], (err, result) => {
-    if (err) throw err;
-    res.send(`<script>alert("Item added successfully."); window.location.href="/item";</script>`);
+    // 2. Check if Barcode already exists
+    const checkBarcodeSql = "SELECT id FROM items WHERE barcode = ?";
+    db.query(checkBarcodeSql, [barcode], (err, barcodeResults) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).send("Database error");
+      }
+      if (barcodeResults.length > 0) {
+        return res.send(`
+          <script>
+            alert("Barcode already exists. Please use another Barcode.");
+            window.history.back();
+          </script>
+        `);
+      }
+
+      // 3. If passed validation → insert new item
+      const sql = `
+        INSERT INTO items (name, sku, category_id, color, quantity, price, barcode, description, image)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `;
+      const params = [name, sku, category_id, color, quantity, price, barcode, description, image];
+
+      db.query(sql, params, (err, result) => {
+        if (err) {
+          console.error(err);
+          return res.status(500).send("Failed to add item.");
+        }
+        res.send(`
+          <script>
+            alert("Item added successfully.");
+            window.location.href = "/item";
+          </script>
+        `);
+      });
+    });
   });
 });
 

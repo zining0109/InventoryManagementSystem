@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Profile</title>
+    <link rel="stylesheet" href="/css/edit-profile.css">
+    <link rel="stylesheet" href="/css/menu.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+<body>
+  <!-- Sidebar -->
+  <div id="sidebar" class="sidebar">
+    <div class="menu">
+      <ul>
+        <li><a href="/home"><i class="bi bi-house"></i> Dashboard</a></li>
+        <li><a href="/inventory"><i class="bi bi-boxes"></i> Inventory</a></li> 
+        <li><a href="/user"><i class="bi bi-people"></i> User</a></li>
+        <li><a href="/report"><i class="bi bi-bar-chart-line"></i> Report</a></li>
+        <li><a href="/history"><i class="bi bi-clock-history"></i> History</a></li>
+      </ul>
+    </div>
+    <div class="logout">
+      <ul>
+        <li><a href="/login"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="content">
+    <div class="container1">
+      <h1>Inventory Management System <a href="/profile"><i class="bi bi-person-circle"></i></a></h1>
+    </div>
+    <hr>
+    <div class="container2">
+      <h2>Edit Profile</h2>
+    </div>
+    <hr>
+    <div class="container3">
+        <form id="editForm" action="/edit-profile" method="POST" class="form-grid">
+            <label style="margin-top: 6px;">Work ID</label>
+            <p><%= user.work_id %></p>
+
+            <label>Name</label>
+            <input type="text" name="name" value="<%= user.name %>" required>
+
+            <label>Identity No</label>
+            <input type="text" name="id_no" value="<%= user.id_no %>" required>
+
+            <label style="margin-top: 6px;">Username</label>
+            <p><%= user.username %></p>
+
+            <label style="margin-top: 6px;">Email</label>
+            <p><%= user.email %></p>
+
+            <label style="margin-top: 6px;">Role</label>
+            <p><%= user.role %></p>
+
+            <label>Gender</label>
+            <select name="gender" required>
+                <option value="Male" <%= user.gender === "Male" ? "selected" : "" %>>Male</option>
+                <option value="Female" <%= user.gender === "Female" ? "selected" : "" %>>Female</option>
+                <option value="Other" <%= user.gender === "Other" ? "selected" : "" %>>Other</option>
+            </select>
+
+            <label>Age</label>
+            <input type="number" name="age" value="<%= user.age %>" required>
+
+            <label>Contact No</label>
+            <input type="text" name="contact_no" value="<%= user.contact_no %>" required>
+            
+            <div class="button-group">
+                <button type="submit" class="btn1">Save</button>
+                <button type="button" onclick="window.location.href='/profile'" class="btn2">Cancel</button>
+            </div>
+        </form>
+    </div>
+  </div>
+</body>
+</html>

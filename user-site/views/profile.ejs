@@ -45,8 +45,23 @@
       <h2>Profile</h2>
     </div>
     <hr>
+    <div class="profile-action">
+      <a href="/edit-profile" style="position: absolute; right: 0; top: 24%; transform: translateY(-50%); margin-right: 28px;"><i class="bi bi-pencil-square" style="font-size: 1.2rem;"></i></a>
+    </div>
     <table class="table table-bordered user-detail-table">
     <tbody>
+      <tr>
+        <th>Work ID</th>
+        <td><%= user.work_id %></td>
+      </tr>
+      <tr>
+        <th>Name</th>
+        <td><%= user.name %></td>
+      </tr>
+      <tr>
+        <th>Identity No</th>
+        <td><%= user.id_no %></td> 
+      </tr>
       <tr>
         <th>Username</th>
         <td><%= user.username %></td>
@@ -56,24 +71,20 @@
         <td><%= user.email %></td>
       </tr>
       <tr>
-        <th>Name</th>
-        <td><%= user.name %></td>
-      </tr>
-      <tr>
-        <th>Age</th>
-        <td><%= user.age %></td>
+        <th>Role</th>
+        <td><%= user.role %></td>
       </tr>
       <tr>
         <th>Gender</th>
         <td><%= user.gender %></td>
       </tr>
       <tr>
-        <th>Contact No</th>
-        <td><%= user.contact_no %></td>
+        <th>Age</th>
+        <td><%= user.age %></td>
       </tr>
       <tr>
-        <th>Role</th>
-        <td><%= user.role %></td>
+        <th>Contact No</th>
+        <td><%= user.contact_no %></td>
       </tr>
     </tbody>
     </table>
