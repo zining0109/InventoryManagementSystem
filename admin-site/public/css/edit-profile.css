@@ -4,9 +4,9 @@
 
 .form-grid {
   display: grid;
-  grid-template-columns: 150px auto; /* Label column, Input column */
+  grid-template-columns: 1fr 1fr; /* Label column, Input column */
   gap: 20px 20px; /* Row gap, column gap */
-  max-width: 400px;
+  max-width: 800px;
 }
 
 .form-grid label {
@@ -21,15 +21,7 @@
   border: 1px solid rgba(0, 0, 0, 0.3);
 }
 
-.form-grid textarea {
-  width: 100%;
-  border-radius: 5px;
-  box-sizing: border-box;
-  border: 1px solid rgba(0, 0, 0, 0.3);
-}
-
-.form-grid input:focus, 
-.form-grid textarea:focus {
+.form-grid input:focus {
   border-color: rgba(0, 0, 0, 0.6); /* Slightly darker on focus */
   outline: none;
 }
@@ -40,6 +32,27 @@
   border-radius: 5px;
   box-sizing: border-box;
   border: 1px solid rgba(0, 0, 0, 0.3);
+}
+
+.form-group {
+  display: grid;
+  grid-template-columns: 150px 1fr; /* label fixed, input flexible */
+  align-items: center;
+  row-gap: 15px;
+}
+
+.form-group label {
+  display: block;
+  margin-top: 10px;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  height: 30px;
+  border-radius: 5px;
+  border: 1px solid rgba(0, 0, 0, 0.3);
+  box-sizing: border-box;
 }
 
 .button-group {

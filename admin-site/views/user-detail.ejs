@@ -74,7 +74,10 @@
       </tr>
       <tr>
         <th>Password</th>
-        <td><%= user.password %></td>
+        <td>
+          <span id="passwordField" style="letter-spacing: 2px;">********</span>
+          <button type="button" id="togglePassword" style="margin-left:10px;">Show</button>
+        </td>
       </tr>
       <tr>
         <th>Email</th>
@@ -99,5 +102,25 @@
     </tbody>
     </table>
   </div>
+<script>
+  const passwordField = document.getElementById("passwordField");
+  const toggleBtn = document.getElementById("togglePassword");
+
+  // Store the real password securely passed from backend
+  const realPassword = "<%= user.password %>";  
+
+  let showing = false;
+  toggleBtn.addEventListener("click", () => {
+    if (!showing) {
+      passwordField.textContent = realPassword;  // show plain text
+      toggleBtn.textContent = "Hide";
+      showing = true;
+    } else {
+      passwordField.textContent = "********";    // mask again
+      toggleBtn.textContent = "Show";
+      showing = false;
+    }
+  });
+</script>
 </body>
 </html>

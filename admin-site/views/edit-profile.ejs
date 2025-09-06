@@ -38,14 +38,31 @@
     <hr>
     <div class="container3">
         <form id="editForm" action="/edit-profile" method="POST" class="form-grid">
+          <!-- LEFT SIDE -->
+          <div class="form-group">
+            <label>Work ID</label>
+            <input type="text" name="work_id" value="<%= user.work_id %>" required>
+
             <label>Username</label>
             <input type="text" name="username" value="<%= user.username %>" required>
 
+            <label for="password">New Password</label>
+            <input type="password" name="password">
+
+            <label for="confirmPassword">Confirm Password</label>
+            <input type="password" name="confirmPassword">
+
             <label>Email</label>
             <input type="email" name="email" value="<%= user.email %>" required>
+          </div>
 
+          <!-- RIGHT SIDE -->
+          <div class="form-group">
             <label>Name</label>
             <input type="text" name="name" value="<%= user.name %>" required>
+
+            <label>Identity No</label>
+            <input type="text" name="id_no" value="<%= user.id_no %>" required>
 
             <label>Age</label>
             <input type="number" name="age" value="<%= user.age %>" required>
@@ -60,8 +77,9 @@
             <label>Contact No</label>
             <input type="text" name="contact_no" value="<%= user.contact_no %>" required>
 
-            <label style="margin-top: 6px;">Role</label>
+            <label>Role</label>
             <p><%= user.role %></p>
+          </div>
             
             <div class="button-group">
                 <button type="submit" class="btn1">Save</button>

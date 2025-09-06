@@ -34,7 +34,7 @@
     <hr>
     <div class="container2">
       <h2>
-        <a href="/item"><i class="bi bi-arrow-left-circle"></i></a> Edit Item
+        <a href="/item"><i class="bi bi-arrow-left-circle"></i></a> Edit User
       </h2>
     </div>
     <hr>
@@ -51,11 +51,14 @@
             <label for="name">Name</label>
             <input type="text" name="name" value="<%= user.name %>" required>
 
+            <label>Identity No</label>
+            <input type="text" name="id_no" value="<%= user.id_no %>" required>
+
             <label for="username">Username</label>
             <input type="text" name="username" value="<%= user.username %>" required>
 
-           <label for="password">Password</label>    
-           <input type="password" name="password" value="<%= user.password %>" required>
+           <label for="password">New Password</label>    
+           <input type="password" name="password">
 
             <label for="confirmPassword">Confirm Password</label>
             <input type="password" name="confirmPassword">

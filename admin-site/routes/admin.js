@@ -206,58 +206,108 @@ router.get('/edit-profile', (req, res) => {
 
 // Handle form submission
 router.post("/edit-profile", (req, res) => {
-    if (!req.session.user) {
-        return res.redirect("/login");
+  if (!req.session.user) {
+    return res.redirect("/login");
+  }
+
+  const { work_id, username, password, confirmPassword, email, name, id_no, age, gender, contact_no } = req.body;
+  const userId = req.session.user.id;
+  const userRole = req.session.user.role;
+
+  // 1. Validate password if being updated
+  if (password || confirmPassword) {
+    if (password !== confirmPassword) {
+      return res.send(`
+        <script>
+          alert("Passwords do not match. Please enter again.");
+          window.location.href = "/edit-profile";
+        </script>
+      `);
+    }
+  }
+
+  // 2. Validate work_id rule for managers
+  if (userRole === "manager") {
+    if (!/^A/.test(work_id)) {
+      return res.send(`
+        <script>
+          alert("Manager Work ID must start with 'A'.");
+          window.location.href = "/edit-profile";
+        </script>
+      `);
+    }
+  }
+
+  // Check uniqueness of username + work_id
+  const checkSql = `
+    SELECT id, username, work_id FROM users
+    WHERE (username = ? OR work_id = ?) AND id != ?
+  `;
+  db.query(checkSql, [username, work_id, userId], (err, results) => {
+    if (err) {
+      console.error("Database error:", err);
+      return res.status(500).send("Database error");
     }
 
-    const { username, email, name, age, gender, contact_no } = req.body;
-    const userId = req.session.user.id;
+    if (results.length > 0) {
+      let conflictMsg = "";
+      results.forEach(r => {
+        if (r.username === username) conflictMsg = "Username already exists. Please assign another username.";
+        if (r.work_id === work_id) conflictMsg = "Work ID already exists. Please assign another work id.";
+      });
 
-    // Check if username is taken by another user
-    db.query("SELECT id FROM users WHERE username = ? AND id != ?", [username, userId], (err, results) => {
-        if (err) {
-            console.error("Database error:", err);
-            return res.status(500).send("Database error");
-        }
+      return res.send(`
+        <script>
+          alert("${conflictMsg}");
+          window.location.href = "/edit-profile";
+        </script>
+      `);
+    }
 
-        if (results.length > 0) {
-            // Username already taken
-            return res.send(`
-                <script>
-                    alert("Username is already taken. Please choose another one.");
-                    window.location.href = "/edit-profile";
-                </script>
-            `);
-        }
-
-    // If username is unique, update profile
-    const sql = `
-        UPDATE users 
-        SET username = ?, email = ?, name = ?, age = ?, gender = ?, contact_no = ?
-        WHERE id = ?
+    // Build update query dynamically
+    let sql = `
+      UPDATE users 
+      SET work_id = ?, username = ?, email = ?, name = ?, id_no = ?, age = ?, gender = ?, contact_no = ?
     `;
+    const params = [work_id, username, email, name, id_no, age, gender, contact_no, userId];
 
-    db.query(sql, [username, email, name, age, gender, contact_no, userId], (err) => {
-        if (err) {
-            console.error("Update error:", err);
-            return res.status(500).send("Database update error");
-        }
+    if (password) {
+      sql += `, password = ?`;
+      params.splice(params.length - 1, 0, password); // insert before userId
+    }
 
-        // update session data too (so profile page shows updated info immediately)
-        req.session.user.username = username;
-        req.session.user.email = email;
-        req.session.user.name = name;
-        req.session.user.age = age;
-        req.session.user.gender = gender;
-        req.session.user.contact_no = contact_no;
+    sql += ` WHERE id = ?`;
 
-        res.send(`<script>
+    db.query(sql, params, (err) => {
+      if (err) {
+        console.error("Update error:", err);
+        return res.status(500).send("Database update error");
+      }
+
+      // update session data too
+      req.session.user.work_id = work_id;
+      req.session.user.username = username;
+      req.session.user.email = email;
+      req.session.user.name = name;
+      req.session.user.id_no = id_no;
+      req.session.user.age = age;
+      req.session.user.gender = gender;
+      req.session.user.contact_no = contact_no;
+
+      if (password) {
+        req.session.user.password = password; // ⚠️ best practice: hash this before storing
+      }
+
+      res.send(`
+        <script>
           alert("Profile updated successfully.");
           window.location.href = "/profile";
-          </script>`);
-        });
+        </script>
+      `);
     });
+  });
 });
+
 
 router.get('/inventory', (req, res) => {
   const searchQuery = req.query.q;
@@ -382,7 +432,7 @@ router.post('/add-user', (req, res) => {
 
   // Validate password confirmation
   if (password !== confirmPassword) {
-    return res.send(`<script>alert("Passwords do not match. Please enter again."); window.location.href='/add-user';</script>`);
+    return res.send(`<script>alert("Passwords do not match. Please try again."); window.location.href='/add-user';</script>`);
   }
 
   // Check if username already exists
@@ -394,7 +444,7 @@ router.post('/add-user', (req, res) => {
     }
 
     if (usernameResult.length > 0) {
-      return res.send(`<script>alert("Username already exists. Please assign another username."); window.location.href='/add-user';</script>`);
+      return res.send(`<script>alert("Username already exists. Please use another username."); window.location.href='/add-user';</script>`);
     }
 
     // Check if work_id already exists
@@ -406,7 +456,7 @@ router.post('/add-user', (req, res) => {
       }
 
       if (workIdResult.length > 0) {
-        return res.send(`<script>alert("Work ID already exists. Please assign another Work ID."); window.location.href='/add-user';</script>`);
+        return res.send(`<script>alert("Work ID already exists. Please use another Work ID."); window.location.href='/add-user';</script>`);
       }
 
       // Insert user if all validation passed
@@ -503,6 +553,7 @@ router.post('/user/edit/:id', (req, res) => {
   const {
     work_id,
     name,
+    id_no,
     username,
     password,
     confirmPassword,
@@ -539,7 +590,7 @@ router.post('/user/edit/:id', (req, res) => {
     // Step 2: validate password only if changed
     if (password && password !== userCurrentPassword) {
       if (!confirmPassword || password !== confirmPassword) {
-        return res.send(`<script>alert("Passwords do not match."); window.history.back();</script>`);
+        return res.send(`<script>alert("Passwords do not match. Please try again."); window.history.back();</script>`);
       }
     }
 
@@ -548,7 +599,7 @@ router.post('/user/edit/:id', (req, res) => {
     db.query(checkUsername, [username, userId], (err, usernameResult) => {
       if (err) return res.status(500).send('Server error');
       if (usernameResult.length > 0) {
-        return res.send(`<script>alert("Username already exists."); window.history.back();</script>`);
+        return res.send(`<script>alert("Username already exists. Please use another Username."); window.history.back();</script>`);
       }
 
       // Step 4: check if work_id already exists (excluding current user)
@@ -556,7 +607,7 @@ router.post('/user/edit/:id', (req, res) => {
       db.query(checkWorkId, [work_id, userId], (err, workIdResult) => {
         if (err) return res.status(500).send('Server error');
         if (workIdResult.length > 0) {
-          return res.send(`<script>alert("Work ID already exists."); window.history.back();</script>`);
+          return res.send(`<script>alert("Work ID already exists. Please use another Work ID."); window.history.back();</script>`);
         }
 
         // Step 5: update user (conditionally update password)
@@ -565,18 +616,18 @@ router.post('/user/edit/:id', (req, res) => {
           // update with new password
           sql = `
             UPDATE users SET
-              work_id=?, name=?, username=?, password=?, email=?, role=?, gender=?, age=?, contact_no=?
+              work_id=?, name=?, id_no=?, username=?, password=?, email=?, role=?, gender=?, age=?, contact_no=?
             WHERE id=?
           `;
-          params = [work_id, name, username, password, email, role, gender, age, contact_no, userId];
+          params = [work_id, name, id_no, username, password, email, role, gender, age, contact_no, userId];
         } else {
           // update without changing password
           sql = `
             UPDATE users SET
-              work_id=?, name=?, username=?, email=?, role=?, gender=?, age=?, contact_no=?
+              work_id=?, name=?, id_no=?, username=?, email=?, role=?, gender=?, age=?, contact_no=?
             WHERE id=?
           `;
-          params = [work_id, name, username, email, role, gender, age, contact_no, userId];
+          params = [work_id, name, id_no, username, email, role, gender, age, contact_no, userId];
         }
 
         db.query(sql, params, (err, result) => {
