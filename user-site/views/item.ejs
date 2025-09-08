@@ -92,7 +92,17 @@
             }
           });
         </script>
-        <a href="/add-item"><i class="bi bi-plus-square fs-4" style="padding-left: 500px;"></i></a>
+        <!-- Filter dropdown -->
+        <div class="custom-dropdown" id="filterDropdown" style="margin-left: 250px;">
+          <i class="bi bi-filter-circle-fill filter-icon" style="cursor: pointer;"></i>
+        <div class="custom-dropdown-menu">
+          <a href="/item?status=in">In Stock</a>
+          <a href="/item?status=low">Low Stock</a>
+          <a href="/item?status=out">Out of Stock</a>
+          <a href="/item">All</a>
+        </div>
+        </div>
+        <a href="/add-item"><i class="bi bi-plus-square fs-4" style="padding-left: 220px;"></i></a>
     </h2>
     </div>
     <hr>
@@ -105,15 +115,16 @@
           <th>SKU</th> 
           <th>Category</th>
           <th>Quantity</th>
+          <th>Status</th>
           <th>Price</th>
           <th>Barcode</th>
         </tr>
       </thead>
       <tbody>
-        <tr><td colspan="7"><hr></td></tr> <!-- Line after header -->
+        <tr><td colspan="8"><hr></td></tr> <!-- Line after header -->
         <% if (items.length === 0) { %>
         <tr>
-          <td colspan="7" style="text-align: center;">No item found.</td>
+          <td colspan="8" style="text-align: center;">No item found.</td>
         </tr>
         <% } else { %>
         <% items.forEach(item => { %>
@@ -123,15 +134,42 @@
           <td><%= item.sku %></td> 
           <td><%= item.category_name || 'Uncategorized' %></td>
           <td><%= item.quantity %></td>
+          <td>
+              <% if (item.status === "In Stock") { %>
+                <span class="badge bg-success">In Stock</span>
+              <% } else if (item.status === "Low Stock") { %>
+                <span class="badge bg-warning text-dark">Low Stock</span>
+              <% } else { %>
+                <span class="badge bg-danger">Out of Stock</span>
+              <% } %>
+              <% if (item.low_stock) { %>
+              <span style="color: red; font-size: 18px;">•</span>
+              <% } %>
+          </td>
           <td><%= item.price %></td>
           <td><%= item.barcode %></td>
         </tr>
-        <tr><td colspan="7"><hr></td></tr> <!-- Line between items -->
+        <tr><td colspan="8"><hr></td></tr> <!-- Line between items -->
         <% }) %>
         <% } %>
       </tbody>
     </table>
     </div>
   </div>
+<script>
+  // Toggle dropdown
+  const filterDropdown = document.getElementById("filterDropdown");
+  const button = filterDropdown.querySelector(".filter-icon");
+
+  button.addEventListener("click", (e) => {
+    e.stopPropagation();
+    filterDropdown.classList.toggle("show");
+  });
+
+  // Close dropdown if clicked outside
+  document.addEventListener("click", () => {
+    filterDropdown.classList.remove("show");
+  });
+</script>
 </body>
 </html>

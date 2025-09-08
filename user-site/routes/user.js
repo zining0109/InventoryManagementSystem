@@ -210,6 +210,7 @@ const upload = multer({
  
 router.get('/item', (req, res) => {
   const searchQuery = req.query.q;
+  const statusFilter = req.query.status; // get status from query
   let params = [];
 
   let query = `
@@ -225,13 +226,41 @@ router.get('/item', (req, res) => {
     params = [searchTerm, searchTerm];
   }
 
+  // Status filter (Active, Low, Out)
+  if (statusFilter) {
+    const whereOrAnd = query.includes("WHERE") ? " AND" : " WHERE";
+    if (statusFilter === "in") {
+      query += `${whereOrAnd} i.quantity > 5`;
+    } else if (statusFilter === "low") {
+      query += `${whereOrAnd} i.quantity BETWEEN 1 AND 5`;
+    } else if (statusFilter === "out") {
+      query += `${whereOrAnd} i.quantity = 0`;
+    }
+  }
+
   db.query(query, params, (err, results) => {
     if (err) {
       console.error('Error fetching items:', err);
       return res.status(500).send('Server error');
     }
 
-    res.render('item', { items: results, search: searchQuery || '' });
+    results = results.map(item => ({
+    ...item,
+    low_stock: item.quantity < 5 
+    }));
+
+    // Add a status label for display
+    results.forEach(item => {
+      if (item.quantity === 0) {
+        item.status = "Out of Stock";
+      } else if (item.quantity < 5) {
+        item.status = "Low Stock";
+      } else {
+        item.status = "In Stock";
+      }
+    });
+
+    res.render('item', { items: results, search: searchQuery || '', status: statusFilter || '' });
   });
 });
 
