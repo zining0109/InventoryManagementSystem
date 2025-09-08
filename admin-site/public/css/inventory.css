@@ -23,3 +23,41 @@ button {
     background-color: #fcfcfc;
     cursor: pointer;
 }
+
+/* Dropdown container */
+.custom-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+/* Dropdown menu */
+.custom-dropdown-menu {
+    display: none;
+    position: absolute;
+    background-color: white;
+    min-width: 150px;
+    border: 1px solid rgba(0, 0, 0, 0.3);
+    box-sizing: border-box;
+    border-radius: 5px;
+    z-index: 1000;
+    top: 35px;
+}
+
+.custom-dropdown-menu a {
+    display: block;
+    padding: 8px 12px;
+    text-decoration: none;
+    color: black;
+    font-size: 14px;
+    font-family: inherit; 
+    font-weight: normal;
+}
+
+.custom-dropdown-menu a:hover {
+    background-color: #f1f1f1;
+}
+
+/* Show when active */
+.custom-dropdown.show .custom-dropdown-menu {
+    display: block;
+}

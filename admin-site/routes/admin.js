@@ -338,6 +338,7 @@ router.post("/edit-profile", (req, res) => {
 
 router.get('/inventory', (req, res) => {
   const searchQuery = req.query.q;
+  const statusFilter = req.query.status; // get status from query
   let params = [];
 
   let query = `
@@ -347,10 +348,23 @@ router.get('/inventory', (req, res) => {
     LEFT JOIN categories c ON i.category_id = c.id
   `;
 
+  // Search filter
   if (searchQuery && searchQuery.trim() !== '') {
-    query += ' WHERE i.name LIKE ? OR c.name LIKE ?';
+    query += ' WHERE (i.name LIKE ? OR c.name LIKE ?)';
     const searchTerm = `%${searchQuery.trim()}%`;
-    params = [searchTerm, searchTerm];
+    params.push(searchTerm, searchTerm);
+  }
+
+  // Status filter (Active, Low, Out)
+  if (statusFilter) {
+    const whereOrAnd = query.includes("WHERE") ? " AND" : " WHERE";
+    if (statusFilter === "in") {
+      query += `${whereOrAnd} i.quantity > 5`;
+    } else if (statusFilter === "low") {
+      query += `${whereOrAnd} i.quantity BETWEEN 1 AND 5`;
+    } else if (statusFilter === "out") {
+      query += `${whereOrAnd} i.quantity = 0`;
+    }
   }
 
   db.query(query, params, (err, results) => {
@@ -359,13 +373,27 @@ router.get('/inventory', (req, res) => {
       return res.status(500).send('Server error');
     }
 
-    // Add a low_stock flag
     results = results.map(item => ({
-        ...item,
-        low_stock: item.quantity < 5 // threshold
+    ...item,
+    low_stock: item.quantity < 5 
     }));
 
-    res.render('inventory', { items: results, search: searchQuery || '' });
+    // Add a status label for display
+    results.forEach(item => {
+      if (item.quantity === 0) {
+        item.status = "Out of Stock";
+      } else if (item.quantity < 5) {
+        item.status = "Low Stock";
+      } else {
+        item.status = "In Stock";
+      }
+    });
+
+    res.render('inventory', {
+      items: results,
+      search: searchQuery || '',
+      status: statusFilter || '' // so frontend knows which filter is active
+    });
   });
 });
 
