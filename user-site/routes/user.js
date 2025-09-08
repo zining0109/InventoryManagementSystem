@@ -42,11 +42,6 @@ router.post('/login', async (req, res) => {
   });
 });
 
-// Home GET route
-router.get('/home', (req, res) => {
-  res.render('home'); 
-});
-
 router.get('/forgot-password', (req, res) => {
   res.render('forgot-password'); // Render forgot-password.ejs
 });
@@ -92,6 +87,38 @@ router.post('/forgot-password', (req, res) => {
 
 router.get('/login', (req, res) => {
   res.render('login'); // Renders views/login.ejs
+});
+
+router.get("/home", (req, res) => {
+  const query = `
+    SELECT 
+      SUM(CASE WHEN quantity < 5 THEN 1 ELSE 0 END) AS low_stock,
+      SUM(quantity) AS total_quantity,
+      COUNT(*) AS total_items,
+      SUM(CASE WHEN quantity > 5 THEN 1 ELSE 0 END) AS active_items
+    FROM items;
+  `;
+
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).send("Database error");
+    }
+
+    const stats = results[0];
+    const activePercentage = stats.total_items > 0 
+      ? Math.round((stats.active_items / stats.total_items) * 100) 
+      : 0;
+
+    res.render("home", {
+      stats: {
+        lowStock: stats.low_stock || 0,
+        quantity: stats.total_quantity || 0,
+        allItems: stats.total_items || 0,
+        activePercentage: activePercentage
+      }
+    });
+  });
 });
 
 router.get('/profile', (req, res) => {

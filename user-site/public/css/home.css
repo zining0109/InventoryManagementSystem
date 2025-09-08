@@ -1,6 +1,35 @@
 #dateTime {
   font-size: 18px;
   font-weight: bold;
-  margin-top: 10px;
+  margin-top: 20px;
   text-align: center;
+}
+
+.container4 {
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+  margin: 10px;
+}
+
+.card {
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  padding: 20px;
+  margin: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+  font-size: 20px;
+  font-weight: bold;
+  margin-bottom: 20px;
+}
+
+.chart-box {
+  padding-left: 70px;
+}
+
+.data {
+  padding-left: 50px;
 }
