@@ -121,7 +121,7 @@
           <td><%= item.sku %></td> 
           <td><%= item.category_name || 'Uncategorized' %></td>
           <td><%= item.quantity %></td>
-           <td>
+          <td>
               <% if (item.status === "In Stock") { %>
                 <span class="badge bg-success">In Stock</span>
               <% } else if (item.status === "Low Stock") { %>
@@ -132,7 +132,7 @@
               <% if (item.low_stock) { %>
               <span style="color: red; font-size: 18px;">•</span>
               <% } %>
-            </td>
+          </td>
           <td><%= item.price %></td>
           <td><%= item.barcode %></td>
         </tr>
