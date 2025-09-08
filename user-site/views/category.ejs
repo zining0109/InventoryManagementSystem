@@ -77,6 +77,41 @@
         }
       }
   </script>
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const links = document.querySelectorAll(".sidebar a");
+    const currentPath = window.location.pathname;
+
+    // First part after "/"
+    let basePath = "/" + currentPath.split("/")[1];
+
+    // Normalize mappings (group under parent menu)
+    if (["/home"].includes(basePath)) {
+      basePath = "/home";
+    }
+    if (["/item", "/edit-item"].includes(basePath)) {
+      basePath = "/item";
+    }
+    if (["/add-item"].includes(basePath)) {
+      basePath = "/add-item";
+    }
+    if (["/category", "/add-category", "/edit-category"].includes(basePath)) {
+      basePath = "/category";
+    }
+    if (["/barcode"].includes(basePath)) {
+      basePath = "/barcode";
+    }
+    if (["/history"].includes(basePath)) {
+      basePath = "/history";
+    }
+
+    links.forEach(link => {
+      if (link.getAttribute("href") === basePath) {
+        link.classList.add("active");
+      }
+    });
+  });
+</script>
 </head>
 <body>
   <!-- Sidebar -->

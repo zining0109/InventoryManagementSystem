@@ -91,3 +91,13 @@ hr {
   justify-content: space-between;
   align-items: center;
 }
+
+.sidebar a.active {
+  background-color: #406283; /* highlight color */
+  color: #fff !important;
+  border-radius: 5px;
+}
+
+.sidebar a.active i {
+  color: #fff;
+}
