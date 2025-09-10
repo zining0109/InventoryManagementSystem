@@ -188,7 +188,7 @@ router.post('/edit-profile', (req, res) => {
 // Configure storage
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, "../uploads/items")); // folder for uploads
+    cb(null, path.join(__dirname, "../..", "uploads/items")); // folder for uploads
   },
   filename: (req, file, cb) => {
     cb(null, Date.now() + path.extname(file.originalname)); // unique filename
