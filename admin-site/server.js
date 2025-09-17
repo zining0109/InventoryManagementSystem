@@ -22,8 +22,6 @@ app.use(session({
   saveUninitialized: false
 }));
 
-app.use(express.static(path.join(__dirname, "public")));
-
 // Routes
 app.use("/", adminRoutes);
 
@@ -32,6 +30,7 @@ app.get('/', (req, res) => {
 });
 
 const PORT = 3001;
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
