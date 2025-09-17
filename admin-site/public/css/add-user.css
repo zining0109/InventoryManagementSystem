@@ -1,5 +1,5 @@
 .container3 {
-    padding-top: 18px;
+    padding-top: 4px;
 }
 
 .form-grid {
@@ -19,7 +19,7 @@
   border-radius: 5px;
   box-sizing: border-box;
   border: 1px solid rgba(0, 0, 0, 0.3);
-  margin-top: 12px;
+  margin-top: 15px;
 }
 
 .form-grid input:focus {
@@ -33,7 +33,7 @@
   border-radius: 5px;
   box-sizing: border-box;
   border: 1px solid rgba(0, 0, 0, 0.3);
-  margin-top: 12px;
+  margin-top: 15px;
 }
 
 .form-group {
