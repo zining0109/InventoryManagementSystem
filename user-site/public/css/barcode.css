@@ -78,6 +78,7 @@
   cursor: pointer;
   transition: color 0.2s;
 }
+
 .close-btn:hover {
   color: #000;
 }
