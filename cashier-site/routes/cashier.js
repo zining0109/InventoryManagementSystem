@@ -1,7 +1,7 @@
 //app.js
 const express = require('express');
 const router = express.Router();
-const db = require('../db');
+const { db, dbPromise } = require("../db");
 
 // Login route
 router.post('/login', (req, res) => {
@@ -79,10 +79,87 @@ router.post('/forgot-password', (req, res) => {
   });
 });
 
+// Load categories and items
 router.get('/home', (req, res) => {
-  res.render('home'); // Renders views/login.ejs
+  db.query('SELECT * FROM categories', (err, categories) => {
+    if (err) return res.send('DB error');
+    db.query('SELECT * FROM items', (err, items) => {
+      if (err) return res.send('DB error');
+      // Add status and ensure price is a number
+      items = items.map(item => ({
+        ...item,
+        price: Number(item.price), // convert string to number
+        status: item.quantity === 0 ? 'Out of Stock' : item.quantity <= 5 ? 'Low Stock' : 'In Stock'
+      }));
+      res.render('home', { categories, items });
+    });
+  });
 });
 
+// Checkout Route
+router.post("/checkout", async (req, res) => {
+  const { cart } = req.body;
+  const userId = req.session.user?.id || 1;
+
+  if (!cart || cart.length === 0) {
+    return res.status(400).json({ success: false, error: "Cart is empty" });
+  }
+
+  const conn = await dbPromise.getConnection(); // ✅ promise connection
+  try {
+    await conn.beginTransaction();
+
+    // Insert sale
+    const total = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
+    const [saleResult] = await conn.query(
+      "INSERT INTO sales (user_id, total, created_at) VALUES (?, ?, NOW())",
+      [userId, total]
+    );
+    const salesId = saleResult.insertId;
+
+    // Insert history + update stock
+    for (const item of cart) {
+      await conn.query(
+        "UPDATE items SET quantity = quantity - ? WHERE id = ?",
+        [item.qty, item.id]
+      );
+
+      const [[{ quantity: currentQty }]] = await conn.query(
+        "SELECT quantity FROM items WHERE id = ?",
+        [item.id]
+      );
+
+      await conn.query(
+        `INSERT INTO history 
+          (item_id, user_id, sales_id, action, amount, current_quantity, created_at) 
+         VALUES (?, ?, ?, 'sales', ?, ?, NOW())`,
+        [item.id, userId, salesId, item.qty, currentQty]
+      );
+    }
+
+    // Get cashier name
+    const [[user]] = await conn.query(
+      "SELECT username FROM users WHERE id = ?",
+      [userId]
+    );
+
+    await conn.commit();
+
+    res.json({
+      success: true,
+      salesId,
+      cashier: user?.username || "Unknown",
+      items: cart,
+      total
+    });
+  } catch (err) {
+    await conn.rollback();
+    console.error("Checkout error:", err);
+    res.status(500).json({ success: false, error: "Database error" });
+  } finally {
+    conn.release();
+  }
+});
 
 // Export router so server.js can use it
 module.exports = router;

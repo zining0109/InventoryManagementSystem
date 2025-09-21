@@ -5,6 +5,12 @@ const session = require('express-session');
 
 const app = express();
 
+// Required to parse JSON body from fetch()
+app.use(express.json());
+
+// Serve static files from uploads directory
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
 // Set EJS
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));

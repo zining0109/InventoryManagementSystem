@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>POS</title>
+  <link rel="stylesheet" href="/css/home.css">
+  <link rel="icon" type="image/jpeg" href="/images/favicon.jpg">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+<body>
+  <div class="pos-container">
+    <!-- Left Section -->
+    <div class="products-section">
+      <div id="product-list" class="product-list"></div>
+      <div class="categories" style="margin-top:20px;">
+        <% categories.forEach(cat => { %>
+          <button class="category-btn" data-id="<%= cat.id %>"><%= cat.name %></button>
+        <% }) %>
+      </div>
+    </div>
+
+    <!-- Right Section -->
+    <div class="cart-section">
+      <div class="cart-header">
+        <div class="cart-left">
+          <h3>Cart</h3>
+          <a href="/history"><i class="bi bi-clock-history" title="History"></i></a>
+        </div>
+        <div class="cart-right">
+          <a href="/profile"><i class="bi bi-person-circle" title="Profile"></i></a>
+          <a href="/login"><i class="bi bi-box-arrow-right" title="Logout"></i></a>
+        </div>
+      </div>
+      <ul id="cart-items"></ul>
+      <p id="cart-total">Total (RM): 0.00</p>
+      <button id="checkout-btn">Check Out</button>
+    </div>
+  </div>
+
+  <!-- Product Modal -->
+  <div id="modal-overlay" class="modal-overlay">
+    <div id="product-modal" class="modal">
+      <span class="close-btn" id="close-modal2">&times;</span>
+      <h3 id="modal-name"></h3>
+      <img id="modal-img" style="max-width:100px;max-height:100px;">
+      <table class="modal-details">
+      <tr>
+        <td>Color</td>
+        <td><span id="modal-color"></span></td>
+      </tr>
+      <tr>
+        <td>Price</td>
+        <td>RM<span id="modal-price"></span></td>
+      </tr>
+      <tr>
+        <td>Status</td>
+        <td><span id="modal-status"></span></td>
+      </tr>
+      <tr>
+        <td>Barcode</td>
+        <td><span id="modal-barcode"></span></td>
+      </tr>
+    </table>
+      <div style="padding-top: 10px;">
+        <button type="button" id="qty-minus">-</button>
+        <input type="text" id="modal-qty" value="1" style="width: 40px; text-align: center;" readonly>
+        <button type="button" id="qty-plus">+</button>
+      </div>
+      <div class="button-group">
+        <button id="close-modal" class="btn2">Cancel</button>
+        <button id="add-to-cart" class="btn1">Add</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Receipt Modal -->
+<div id="receipt-overlay" class="modal-overlay">
+  <div id="receipt-modal" class="modal">
+    <h3>Receipt</h3>
+    <div id="receipt-body"><!-- Receipt details injected by JS --></div>
+    <div class="button-group">
+      <button id="receipt-ok" class="btn1">OK</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    const items = <%- JSON.stringify(items) %>;
+    const categories = <%- JSON.stringify(categories) %>;
+    window.cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    let currentCategoryId = categories.length > 0 ? categories[0].id : null;
+
+    function renderProducts(catId) {
+      currentCategoryId = catId;
+      const list = document.getElementById("product-list");
+      list.innerHTML = "";
+      items.filter(i => i.category_id === catId).forEach(p => {
+        list.innerHTML += `
+          <div class="product-card ${p.quantity===0 ? 'disabled':''}" data-id="${p.id}" style="cursor:${p.quantity===0?'not-allowed':'pointer'};">
+            <img src="/uploads/items/${p.image || 'default.png'}" style="width:80px;height:80px;object-fit:cover;">
+            <h4>${p.name}</h4>
+            ${p.quantity===0 ? '<div class="out-of-stock">Out of Stock</div>' : ''}
+          </div>
+        `;
+      });
+    }
+
+  // Open modal when clicking a product
+  document.getElementById("product-list").addEventListener("click", function(e) {
+    const card = e.target.closest(".product-card");
+    if (card && !card.classList.contains('disabled')) {
+      const id = card.dataset.id;
+      const product = items.find(p => p.id == id);
+
+      document.getElementById("modal-name").innerText = product.name;
+      document.getElementById("modal-img").src = `/uploads/items/${product.image || 'default.png'}`;
+      document.getElementById("modal-color").innerText = product.color;
+      document.getElementById("modal-price").innerText = product.price.toFixed(2);
+      document.getElementById("modal-status").innerText = product.status;
+      document.getElementById("modal-barcode").innerText = product.barcode || '-';
+      document.getElementById("modal-qty").max = product.quantity;
+      document.getElementById("modal-qty").value = 1;
+      document.getElementById("add-to-cart").dataset.id = id;
+
+      // show overlay
+      document.getElementById("modal-overlay").classList.add("active");
+    }
+  });
+
+  // Close modal
+  document.getElementById("close-modal").addEventListener("click", function() {
+    document.getElementById("modal-overlay").classList.remove("active");
+  });
+
+  document.getElementById("close-modal2").addEventListener("click", function() {
+    document.getElementById("modal-overlay").classList.remove("active");
+  });
+
+  const qtyInput = document.getElementById("modal-qty");
+  const qtyMinus = document.getElementById("qty-minus");
+  const qtyPlus = document.getElementById("qty-plus");
+
+  qtyMinus.addEventListener("click", function() {
+    let val = parseInt(qtyInput.value, 10);
+    if (val > 1) qtyInput.value = val - 1;
+  });
+
+  qtyPlus.addEventListener("click", function() {
+    const max = parseInt(qtyInput.max || "9999", 10);
+    let val = parseInt(qtyInput.value, 10);
+    if (val < max) qtyInput.value = val + 1;
+  });
+
+  document.querySelectorAll(".category-btn").forEach(btn => {
+    btn.addEventListener("click", function() {
+      // remove highlight from all
+      document.querySelectorAll(".category-btn").forEach(b => b.classList.remove("active-category"));
+      // highlight current
+      this.classList.add("active-category");
+
+      renderProducts(parseInt(this.dataset.id));
+    });
+  });
+
+  // highlight first one by default
+  document.querySelector(".category-btn")?.classList.add("active-category");
+
+  // Add to cart
+  document.getElementById("add-to-cart").addEventListener("click", function() {
+    const id = this.dataset.id;
+    const qty = parseInt(document.getElementById("modal-qty").value);
+    const product = items.find(p => p.id == id);
+
+    if (qty > product.quantity) {
+      alert(`Only ${product.quantity} left in stock.`);
+      return;
+    }
+
+    const existing = cart.find(i => i.id == id);
+    if (existing) {
+      if (existing.qty + qty > product.quantity) {
+        alert(`Only ${product.quantity} left in stock.`);
+        return;
+      }
+      existing.qty += qty;
+    } else {
+      cart.push({ id: product.id, name: product.name, price: product.price, qty, barcode: product.barcode });
+    }
+
+    localStorage.setItem('cart', JSON.stringify(cart));
+    updateCart();
+
+    // hide overlay after adding
+    document.getElementById("modal-overlay").classList.remove("active");
+  });
+
+  function updateCart() {
+    const cartList = document.getElementById("cart-items");
+    cartList.innerHTML = "";
+    let total = 0;
+    cart.forEach((item, idx) => {
+      const itemTotal = item.price * item.qty;
+      total += itemTotal;
+      cartList.innerHTML += `
+        <li>
+          ${item.name} x${item.qty} @ RM${item.price.toFixed(2)} = RM${itemTotal.toFixed(2)}
+          <button onclick="removeCartItem(${idx})" style="margin-left:20px; background-color: red; color: white; border: none; border-radius: 5px; cursor: pointer; width: 55px; height: 28px;">Delete</button>
+        </li>
+      `;
+    });
+    document.getElementById("cart-total").innerText = `Total (RM): ${total.toFixed(2)}`;
+  }
+
+  window.removeCartItem = function(idx) {
+    cart.splice(idx, 1);
+    localStorage.setItem('cart', JSON.stringify(cart));
+    updateCart();
+  }
+
+  document.querySelectorAll(".category-btn").forEach(btn => {
+    btn.addEventListener("click", function() {
+      renderProducts(parseInt(this.dataset.id));
+    });
+  });
+
+  // Initial render
+  if (categories.length > 0) {
+    renderProducts(categories[0].id);
+  }
+  updateCart();
+  
+  document.getElementById("checkout-btn").addEventListener("click", async function () {
+    if (cart.length === 0) {
+      alert("Cart is empty!");
+      return;
+    }
+
+    try {
+      const res = await fetch("/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cart })
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        // Build receipt HTML
+        let html = `
+          <p><strong>Sales ID:</strong> ${data.salesId}</p>
+          <p><strong>Cashier:</strong> ${data.cashier || "Unknown"}</p>
+          <p><strong>Date:</strong> ${new Date().toLocaleString()}</p>
+          <table border="1" cellspacing="0" cellpadding="5" width="100%">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Unit Price</th>
+                <th>Qty</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+
+        let grandTotal = 0;
+        data.items.forEach(it => {
+          const lineTotal = it.price * it.qty;
+          grandTotal += lineTotal;
+          html += `
+            <tr>
+              <td>${it.name}</td>
+              <td>RM${it.price.toFixed(2)}</td>
+              <td>${it.qty}</td>
+              <td>RM${lineTotal.toFixed(2)}</td>
+            </tr>
+          `;
+        });
+
+        html += `
+            </tbody>
+          </table>
+          <h4 style="text-align:right;">Total: RM${grandTotal.toFixed(2)}</h4>
+        `;
+
+        // Inject content
+        document.getElementById("receipt-body").innerHTML = html;
+
+        // Show modal
+        document.getElementById("receipt-overlay").classList.add("active");
+
+        // Clear cart
+        cart = [];
+        localStorage.removeItem("cart");
+        updateCart();
+      } else {
+        alert("Checkout failed: " + (data.error || "Unknown error"));
+      }
+    } catch (err) {
+      console.error("Checkout request failed", err);
+      alert("Checkout request failed");
+    }
+  });
+
+   document.getElementById("receipt-ok").addEventListener("click", function() {
+    document.getElementById("receipt-overlay").classList.remove("active");
+  });
+});
+</script>
+</body>
+</html>
