@@ -28,7 +28,7 @@
           <a href="/history"><i class="bi bi-clock-history" title="History"></i></a>
         </div>
         <div class="cart-right">
-          <a href="/profile"><i class="bi bi-person-circle" title="Profile"></i></a>
+          <i class="bi bi-person-circle" title="Profile" id="profile-btn"></i>
           <a href="/login"><i class="bi bi-box-arrow-right" title="Logout"></i></a>
         </div>
       </div>
@@ -77,11 +77,64 @@
   <!-- Receipt Modal -->
   <div id="receipt-overlay" class="modal-overlay">
     <div id="receipt-modal" class="modal">
+      <span class="close-btn" id="close-modal3">&times;</span>
       <h3>Receipt</h3>
       <div id="receipt-body"><!-- Receipt details injected by JS --></div>
       <div class="button-group">
         <button id="receipt-ok" class="btn1">OK</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Profile Modal -->
+  <div id="profile-overlay" class="modal-overlay">
+    <div id="profile-modal" class="modal">
+      <span class="close-btn" id="close-modal4">&times;</span>
+      <h3>Profile</h3>
+      <div id="profile-body"><!-- injected by JS --></div>
+      <div class="button-group">
+        <button id="edit-profile" class="btn2">Edit</button>
+        <button id="profile-close" class="btn1">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Profile Modal -->
+  <div id="edit-profile-overlay" class="modal-overlay">
+    <div id="edit-profile-modal" class="modal">
+      <span class="close-btn" id="close-modal5">&times;</span>
+      <h3>Edit Profile</h3>
+      <form id="edit-profile-form" class="form-grid">
+        <div class="form-group">
+          <label>Name</label>
+          <input type="text" id="edit-name" name="name" required>
+        </div>
+        <div class="form-group">
+          <label>Identity No</label>
+         <input type="text" id="id_no" name="id_no" required>
+        </div>
+        <div class="form-group">
+          <label>Gender</label>
+          <select id="edit-gender" name="gender">
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Age</label>
+          <input type="number" id="edit-age" name="age" required>
+        </div>
+        <div class="form-group">
+          <label>Contact No</label>
+          <input type="text" id="edit-contact" name="contact_no" required>
+        </div>
+
+        <div class="button-group2">
+          <button type="button" id="edit-cancel" class="btn2">Cancel</button>
+          <button type="submit" class="btn1">Save</button>
+        </div>
+      </form>
     </div>
   </div>
 
@@ -306,6 +359,124 @@
    document.getElementById("receipt-ok").addEventListener("click", function() {
     document.getElementById("receipt-overlay").classList.remove("active");
   });
+
+  document.getElementById("close-modal3").addEventListener("click", function() {
+    document.getElementById("receipt-overlay").classList.remove("active");
+  });
+
+  // Profile Modal
+  const profileBtn = document.getElementById("profile-btn");
+  const profileOverlay = document.getElementById("profile-overlay");
+  const profileBody = document.getElementById("profile-body");
+  const profileClose = document.getElementById("profile-close");
+
+  profileBtn.addEventListener("click", async () => {
+    try {
+      const res = await fetch("/api/profile");
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "Failed to load profile");
+        return;
+      }
+
+      // Build profile HTML
+      profileBody.innerHTML = `
+        <table class="table table-bordered user-detail-table">
+          <tbody>
+            <tr><th>Work ID</th><td>${data.work_id}</td></tr>
+            <tr><th>Name</th><td>${data.name}</td></tr>
+            <tr><th>Identity No</th><td>${data.id_no}</td></tr>
+            <tr><th>Username</th><td>${data.username}</td></tr>
+            <tr><th>Email</th><td>${data.email}</td></tr>
+            <tr><th>Role</th><td>${data.role}</td></tr>
+            <tr><th>Gender</th><td>${data.gender}</td></tr>
+            <tr><th>Age</th><td>${data.age}</td></tr>
+            <tr><th>Contact No</th><td>${data.contact_no}</td></tr>
+          </tbody>
+        </table>
+      `;
+
+      profileOverlay.classList.add("active");
+    } catch (err) {
+      console.error(err);
+      alert("Error loading profile");
+    }
+  });
+
+  // Close modal
+  profileClose.addEventListener("click", () => {
+    profileOverlay.classList.remove("active");
+  });
+
+  document.getElementById("close-modal4").addEventListener("click", function() {
+    document.getElementById("profile-overlay").classList.remove("active");
+  });
+
+  // Edit Modal
+  const editBtn = document.getElementById("edit-profile");
+  const editOverlay = document.getElementById("edit-profile-overlay");
+  const editForm = document.getElementById("edit-profile-form");
+  const cancelBtn = document.getElementById("edit-cancel");
+
+  // Open edit modal
+  editBtn.addEventListener("click", async () => {
+    const res = await fetch("/api/profile");
+    const data = await res.json();
+
+    // Fill form with current values
+    document.getElementById("edit-name").value = data.name || "";
+    document.getElementById("id_no").value = data.id_no || "";
+    document.getElementById("edit-gender").value = data.gender || "Male";
+    document.getElementById("edit-age").value = data.age || "";
+    document.getElementById("edit-contact").value = data.contact_no || "";
+
+    editOverlay.classList.add("active");
+  });
+
+  // Cancel edit
+  cancelBtn.addEventListener("click", () => {
+    editOverlay.classList.remove("active");
+  });
+
+  document.getElementById("close-modal5").addEventListener("click", function() {
+    document.getElementById("edit-profile-overlay").classList.remove("active");
+  });
+
+  // Submit edit form
+  editForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const formData = {
+      name: document.getElementById("edit-name").value,
+      id_no: document.getElementById("id_no").value,
+      gender: document.getElementById("edit-gender").value,
+      age: document.getElementById("edit-age").value,
+      contact_no: document.getElementById("edit-contact").value
+    };
+
+    try {
+      const res = await fetch("/api/profile/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData)
+      });
+
+      const result = await res.json();
+
+      if (result.success) {
+        alert("Profile updated successfully.");
+        editOverlay.classList.remove("active");
+        location.reload(); // reload to refresh profile modal
+      } else {
+        alert(result.error || "Failed to update profile");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error updating profile");
+    }
+  });
+
 });
 </script>
 </body>

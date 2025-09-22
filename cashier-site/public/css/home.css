@@ -264,3 +264,55 @@ a {
   text-decoration: none;
   color: black;
 }
+
+.user-detail-table td {
+  text-align: left;
+  padding: 10px;
+}
+
+.user-detail-table th {
+  text-align: left;
+  width: 180px;
+  padding: 10px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 150px 1fr; /* Label fixed, input flexible */
+  gap: 15px 20px; /* Row gap, column gap */
+  align-items: center;
+}
+
+.form-group {
+  display: contents; /* let label + input follow parent grid */
+}
+
+.form-grid label {
+  font-weight: bold;
+  text-align: left;
+  padding-right: 10px;
+}
+
+.form-grid input,
+.form-grid select {
+  width: 100%;
+  height: 32px;
+  border-radius: 5px;
+  border: 1px solid rgba(0, 0, 0, 0.3);
+  padding: 5px 8px;
+  box-sizing: border-box;
+}
+
+.form-grid input:focus,
+.form-grid select:focus {
+  border-color: rgba(0, 0, 0, 0.6);
+  outline: none;
+}
+
+.button-group2 {
+  grid-column: span 2; /* Buttons take full row */
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 20px;
+}

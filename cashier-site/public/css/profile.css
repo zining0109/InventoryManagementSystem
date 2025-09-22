@@ -1,0 +1,20 @@
+body {
+  margin: 10px;
+  font-family: Arial, sans-serif;
+  background-color: #fcfcfc;
+}
+
+hr {
+    opacity: 0.3;
+    border: 1px solid #ccc;
+}
+
+.user-detail-table td {
+  padding: 10px;
+}
+
+.user-detail-table th {
+  text-align: left;
+  width: 180px;
+  padding: 10px;
+}

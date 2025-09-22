@@ -237,7 +237,57 @@ router.get("/history/:id/detail", (req, res) => {
   });
 });
 
+// GET profile data (for modal)
+router.get('/api/profile', (req, res) => {
+  const user = req.session.user;
+  
+  if (!user) {
+    return res.status(401).json({ error: "Not logged in" });
+  }
 
+  // fetch fresh data from DB
+  const query = 'SELECT * FROM users WHERE id = ?';
+  db.query(query, [user.id], (err, results) => {
+    if (err) {
+      console.error("Error retrieving profile:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    if (results.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.json(results[0]);
+  });
+});
+
+// Update profile
+router.post('/api/profile/update', (req, res) => {
+  const user = req.session.user;
+
+  if (!user) {
+    return res.status(401).json({ error: "Not logged in" });
+  }
+
+  const { name, id_no, gender, age, contact_no } = req.body;
+
+  const sql = `
+    UPDATE users 
+    SET name = ?, id_no = ?, gender = ?, age = ?, contact_no = ?
+    WHERE id = ?
+  `;
+
+  db.query(sql, [name, id_no, gender, age, contact_no, user.id], (err, result) => {
+    if (err) {
+      console.error("Error updating profile:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+
+    // also update session with new values
+    req.session.user = { ...req.session.user, name, id_no, gender, age, contact_no };
+
+    res.json({ success: true, message: "Profile updated successfully." });
+  });
+});
 
 // Export router so server.js can use it
 module.exports = router;
