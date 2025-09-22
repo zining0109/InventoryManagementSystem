@@ -7,7 +7,7 @@ const { db, dbPromise } = require("../db");
 router.post('/login', (req, res) => {
   const { password } = req.body;
 
-  if (!password || password.length !== 4) {
+  if (!password) {
     return res.send("<script>alert('Invalid Password. Please try again.'); window.location.href='/';</script>");
   }
 
