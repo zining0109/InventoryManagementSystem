@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>History</title>
+    <link rel="stylesheet" href="/css/history.css">
+    <link rel="icon" type="image/jpeg" href="/images/favicon.jpg">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+<body>
+  <div class="content">
+    <div class="container1">
+      <h1>POS</h1>
+    </div>
+    <hr>
+    <div class="container2">
+      <h2 style="display: flex; align-items: center; gap: 10px;">History
+        <form class="d-flex" method="GET" action="/history" style="margin-left: 22px;">
+          <input id="searchInput" class="form-control me-2" type="search" name="q" placeholder="Search name..." aria-label="Search" value="<%= search %>">
+          <button class="btn btn-outline-primary" type="submit"><i class="bi bi-search"></i></button>
+        </form> 
+        <script>
+          const searchInput = document.getElementById("searchInput");
+          searchInput.addEventListener("search", () => {
+            if (!searchInput.value) {
+              window.location.href = "/history"; // reload full list
+            }
+          });
+        </script>
+        <!-- Filter dropdown -->
+        <div class="custom-dropdown" id="filterDropdown" style="margin-left: 450px;">
+          <i class="bi bi-filter-circle-fill filter-icon" style="cursor: pointer;"></i>
+        <div class="custom-dropdown-menu">
+          <a href="/history?months=3">Last 3 months</a>
+          <a href="/history?months=6">Last 6 months</a>
+          <a href="/history?months=9">Last 9 months</a>
+        </div>
+        </div>
+        <div class="date-filter" style="position: relative;">
+          <i class="bi bi-calendar2-fill calendar-icon" style="margin-left: 20px;"></i>
+          <!-- Hidden date picker menu -->
+          <div class="date-menu">
+            <form method="GET" action="/history" style="display: flex; flex-direction: column; gap: 8px; background-color: white">
+              <label>
+                Start Date:
+                <input type="date" name="start_date" value="<%= typeof start_date !== 'undefined' ? start_date : '' %>">
+              </label>
+              <label>
+                End Date:
+                <input type="date" name="end_date" value="<%= typeof end_date !== 'undefined' ? end_date : '' %>">
+              </label>
+              <button type="submit" class="btn btn-outline-primary">Apply</button>
+            </form>
+          </div>
+        </div>
+        <div>
+            <a href="/home"><i class="bi bi-pc-display-horizontal" style="margin-left: 20px; color: black;"></i></a>
+        </div>
+      </h2>
+    </div>
+    <hr>
+    <div class="container3">
+      <table class="table table-bordered">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Cashier Name</th>
+          <th>Total Price</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="4"><hr></td></tr> <!-- Line after header -->
+        <% if (history.length === 0) { %>
+        <tr>
+          <td colspan="4" style="text-align: center;">No history found.</td>
+        </tr>
+        <% } else { %>
+        <% history.forEach(h => { %>
+        <tr class="history-row" data-id="<%= h.id %>">
+          <td><%= h.id %></td>
+          <td><%= h.cashier_name %></td>
+          <td>RM <%= Number(h.total).toFixed(2) %></td>
+          <td><%= new Date(h.created_at).toLocaleString() %></td>
+        </tr>
+        <tr><td colspan="4"><hr></td></tr> <!-- Line between items -->
+      <% }) %>
+      <% } %>
+      </tbody>
+      </table>
+    </div>
+     <!-- Receipt Modal -->
+     <div id="receipt-overlay" class="modal-overlay">
+       <div id="receipt-modal" class="modal">
+         <h3>Receipt</h3>
+         <div id="receipt-body"><!-- Receipt details injected by JS --></div>
+         <div class="button-group">
+           <button id="receipt-ok" class="btn1">OK</button>
+         </div>
+       </div>
+     </div>
+  </div>
+<script>
+  // Toggle dropdown
+  const filterDropdown = document.getElementById("filterDropdown");
+  const button = filterDropdown.querySelector(".filter-icon");
+
+  button.addEventListener("click", (e) => {
+    e.stopPropagation();
+    filterDropdown.classList.toggle("show");
+  });
+
+  // Close dropdown if clicked outside
+  document.addEventListener("click", () => {
+    filterDropdown.classList.remove("show");
+  });
+
+  const calendarIcon = document.querySelector('.calendar-icon');
+  const dateMenu = document.querySelector('.date-menu');
+
+  calendarIcon.addEventListener('click', () => {
+    dateMenu.style.display = dateMenu.style.display === 'block' ? 'none' : 'block';
+  });
+
+  // close if click outside
+  document.addEventListener('click', (event) => {
+    if (!event.target.closest('.date-filter')) {
+      dateMenu.style.display = 'none';
+    }
+  });
+
+  const receiptOverlay = document.getElementById("receipt-overlay");
+  const receiptBody = document.getElementById("receipt-body");
+  const receiptOk = document.getElementById("receipt-ok");
+
+  document.querySelectorAll(".history-row").forEach(row => {
+    row.addEventListener("click", async () => {
+      const id = row.dataset.id;
+      try {
+        const res = await fetch(`/history/${id}/detail`);
+        const data = await res.json();
+
+        if (!res.ok) {
+          alert(data.error || "Error loading details");
+          return;
+        }
+
+        const header = `
+          <p><strong>Receipt ID:</strong> ${data[0].id}</p>
+          <p><strong>Cashier:</strong> ${data[0].cashier_name}</p>
+          <p><strong>Date:</strong> ${new Date(data[0].created_at).toLocaleString()}</p>
+          <hr>
+        `;
+
+        const items = data.map(item => {
+          const itemTotal = (item.price * item.amount).toFixed(2);
+          return `<p>${item.item_name} x ${item.amount} — RM ${itemTotal}</p>`;
+        }).join("");
+
+        const footer = `
+          <hr>
+          <p><strong>Total:</strong> RM ${Number(data[0].total).toFixed(2)}</p>
+        `;
+
+        receiptBody.innerHTML = header + items + footer;
+        receiptOverlay.classList.add("active");
+      } catch (err) {
+        console.error(err);
+        alert("Error fetching sale detail");
+      }
+    });
+  });
+
+  document.getElementById("receipt-ok").addEventListener("click", function() {
+    document.getElementById("receipt-overlay").classList.remove("active");
+  });
+
+</script>
+</body>
+</html>

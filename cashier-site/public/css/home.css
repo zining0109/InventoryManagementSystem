@@ -176,8 +176,6 @@ body {
   max-width: 90%;
   box-shadow: 0 4px 15px rgba(0,0,0,0.3);
   text-align: center;
-  /*align-items: center;
-  justify-content: center;*/
   position: relative;
 }
 
@@ -260,4 +258,9 @@ body {
   margin-left: 10px; /* space between profile & logout */
   cursor: pointer;
   font-size: 25px;
+}
+
+a {
+  text-decoration: none;
+  color: black;
 }

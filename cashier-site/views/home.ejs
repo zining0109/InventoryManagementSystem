@@ -75,15 +75,15 @@
   </div>
 
   <!-- Receipt Modal -->
-<div id="receipt-overlay" class="modal-overlay">
-  <div id="receipt-modal" class="modal">
-    <h3>Receipt</h3>
-    <div id="receipt-body"><!-- Receipt details injected by JS --></div>
-    <div class="button-group">
-      <button id="receipt-ok" class="btn1">OK</button>
+  <div id="receipt-overlay" class="modal-overlay">
+    <div id="receipt-modal" class="modal">
+      <h3>Receipt</h3>
+      <div id="receipt-body"><!-- Receipt details injected by JS --></div>
+      <div class="button-group">
+        <button id="receipt-ok" class="btn1">OK</button>
+      </div>
     </div>
   </div>
-</div>
 
 <script>
   document.addEventListener("DOMContentLoaded", function() {
@@ -249,7 +249,7 @@
       if (data.success) {
         // Build receipt HTML
         let html = `
-          <p><strong>Sales ID:</strong> ${data.salesId}</p>
+          <p><strong>Receipt ID:</strong> ${data.salesId}</p>
           <p><strong>Cashier:</strong> ${data.cashier || "Unknown"}</p>
           <p><strong>Date:</strong> ${new Date().toLocaleString()}</p>
           <table border="1" cellspacing="0" cellpadding="5" width="100%">
