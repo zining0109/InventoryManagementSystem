@@ -282,7 +282,20 @@ router.get('/item/:id', (req, res) => {
       return res.status(404).send('Item not found');
     }
 
-    res.render('item-detail', { item: result[0] });
+    const item = result[0];
+
+    // Ensure quantity is numeric
+    const qty = Number(item.quantity) || 0;
+
+    if (qty === 0) {
+      item.status = "Out of Stock";
+    } else if (qty < 5) {
+      item.status = "Low Stock";
+    } else {
+      item.status = "In Stock";
+    }
+
+    res.render('item-detail', { item });
   });
 });
 
@@ -564,20 +577,40 @@ router.get('/add-category', (req, res) => {
 // Handle add form
 router.post('/add-category', (req, res) => {
   const { name, description } = req.body;
-  const sql = 'INSERT INTO categories (name, description) VALUES (?, ?)';
 
-  db.query(sql, [name, description], (err, result) => {
+  // Check if category already exists
+  const checkSql = 'SELECT * FROM categories WHERE name = ? LIMIT 1';
+  db.query(checkSql, [name], (err, results) => {
     if (err) {
       console.error(err);
       return res.status(500).send('Database error');
     }
 
-    res.send(`
-      <script>
-        alert("Category added successfully.");
-        window.location.href = "/category";
-      </script>
-    `);
+    if (results.length > 0) {
+      // Category already exists
+      return res.send(`
+        <script>
+          alert("Category name already exists. Please use another category name.");
+          window.location.href = "/category";
+        </script>
+      `);
+    }
+
+    // Insert new category if not exists
+    const insertSql = 'INSERT INTO categories (name, description) VALUES (?, ?)';
+    db.query(insertSql, [name, description], (err, result) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).send('Database error');
+      }
+
+      res.send(`
+        <script>
+          alert("Category added successfully.");
+          window.location.href = "/category";
+        </script>
+      `);
+    });
   });
 });
 
