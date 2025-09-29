@@ -46,42 +46,62 @@ router.get('/forgot-password', (req, res) => {
   res.render('forgot-password'); // Render forgot-password.ejs
 });
 
-//Forgot password send email to manager
+// Forgot password send email to manager
 router.post('/forgot-password', (req, res) => {
   const { username, email } = req.body;
 
-  const nodemailer = require('nodemailer');
-  const adminEmail = process.env.EMAIL_ADMIN; // Admin email from .env
-
-  const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS
-    }
-  });
-
-  const mailOptions = {
-    from: process.env.EMAIL_USER,
-    to: adminEmail,
-    subject: 'Password Request',
-    text: `User "${username}" with email "${email}" requested password.`
-  };
-
-  transporter.sendMail(mailOptions, (error, info) => {
-    if (error) {
-      console.error(error);
+  // Step 1: Validate username in DB
+  const sql = 'SELECT * FROM users WHERE username = ?';
+  db.query(sql, [username], (err, rows) => {
+    if (err) {
+      console.error(err);
       return res.send(`<script>
-        alert("Failed to send email. Please try again.");
+        alert("Error checking user. Please try again.");
         window.location.href = "/";
       </script>`);
     }
 
-    // SUCCESS ALERT + redirect back to login
-    res.send(`<script>
-      alert("An email has been sent to your manager. Please wait and check the new password from the reply email.");
-      window.location.href = "/";
-    </script>`);
+    if (rows.length === 0) {
+      // Username not found
+      return res.send(`<script>
+        alert("Invalid username. Please try again.");
+        window.location.href = "/";
+      </script>`);
+    }
+
+    // Step 2: Send email to admin
+    const nodemailer = require('nodemailer');
+    const adminEmail = process.env.EMAIL_ADMIN;
+
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+      }
+    });
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: adminEmail,
+      subject: 'Password Request',
+      text: `User "${username}" with email "${email}" requested password.`
+    };
+
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.error(error);
+        return res.send(`<script>
+          alert("Failed to send email. Please try again.");
+          window.location.href = "/";
+        </script>`);
+      }
+
+      res.send(`<script>
+        alert("An email has been sent to your manager. Please wait and check the new password from the reply email.");
+        window.location.href = "/";
+      </script>`);
+    });
   });
 });
 
@@ -404,19 +424,20 @@ router.post("/item/edit/:id", upload.single("image"), (req, res) => {
 router.get('/item/delete/:id', (req, res) => {
   const id = req.params.id;
 
-  const sql = 'DELETE FROM items WHERE id = ?';
-  db.query(sql, [id], (err, result) => {
+  // Step 1: Check item quantity first
+  const checkSql = 'SELECT quantity FROM items WHERE id = ?';
+  db.query(checkSql, [id], (err, rows) => {
     if (err) {
       console.error(err);
       return res.send(`
         <script>
-          alert("Failed to delete item.");
+          alert("Error checking item.");
           window.location.href = "/item";
         </script>
       `);
     }
 
-    if (result.affectedRows === 0) {
+    if (rows.length === 0) {
       return res.send(`
         <script>
           alert("Item not found.");
@@ -425,12 +446,38 @@ router.get('/item/delete/:id', (req, res) => {
       `);
     }
 
-    res.send(`
-      <script>
-        alert("Item deleted successfully.");
-        window.location.href = "/item";
-      </script>
-    `);
+    const quantity = rows[0].quantity;
+
+    if (quantity > 0) {
+      // Prevent deletion if stock exists
+      return res.send(`
+        <script>
+          alert("Cannot delete item. Quantity is greater than 0.");
+          window.location.href = "/item";
+        </script>
+      `);
+    }
+
+    // Step 2: Proceed with deletion if quantity = 0
+    const deleteSql = 'DELETE FROM items WHERE id = ?';
+    db.query(deleteSql, [id], (err, result) => {
+      if (err) {
+        console.error(err);
+        return res.send(`
+          <script>
+            alert("Failed to delete item.");
+            window.location.href = "/item";
+          </script>
+        `);
+      }
+
+      res.send(`
+        <script>
+          alert("Item deleted successfully.");
+          window.location.href = "/item";
+        </script>
+      `);
+    });
   });
 });
 
