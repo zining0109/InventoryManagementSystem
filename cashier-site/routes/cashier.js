@@ -44,42 +44,63 @@ router.get('/forgot-password', (req, res) => {
   res.render('forgot-password'); // Render forgot-password.ejs
 });
 
-//Forgot password send email to manager
+// Forgot password send email to manager
 router.post('/forgot-password', (req, res) => {
   const { username, email } = req.body;
 
-  const nodemailer = require('nodemailer');
-  const adminEmail = process.env.EMAIL_ADMIN; // Admin email from .env
-
-  const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS
-    }
-  });
-
-  const mailOptions = {
-    from: process.env.EMAIL_USER,
-    to: adminEmail,
-    subject: 'Password Request',
-    text: `User "${username}" with email "${email}" requested password.`
-  };
-
-  transporter.sendMail(mailOptions, (error, info) => {
-    if (error) {
-      console.error(error);
+  // Step 1: Check if username exists in DB
+  const sql = 'SELECT * FROM users WHERE username = ?';
+  db.query(sql, [username], (err, rows) => {
+    if (err) {
+      console.error(err);
       return res.send(`<script>
-        alert("Failed to send email. Please try again.");
+        alert("Error checking user. Please try again.");
         window.location.href = "/";
       </script>`);
     }
 
-    // SUCCESS ALERT + redirect back to login
-    res.send(`<script>
-      alert("An email has been sent to your manager. Please wait and check the new password from the reply email.");
-      window.location.href = "/";
-    </script>`);
+    if (rows.length === 0) {
+      // Username not found
+      return res.send(`<script>
+        alert("Invalid username. Please try again.");
+        window.location.href = "/";
+      </script>`);
+    }
+
+    // Step 2: If username exists, send email to manager
+    const nodemailer = require('nodemailer');
+    const adminEmail = process.env.EMAIL_ADMIN; // Admin email from .env
+
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+      }
+    });
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: adminEmail,
+      subject: 'Password Request',
+      text: `User "${username}" with email "${email}" requested password.`
+    };
+
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.error(error);
+        return res.send(`<script>
+          alert("Failed to send email. Please try again.");
+          window.location.href = "/";
+        </script>`);
+      }
+
+      // SUCCESS ALERT + redirect back to login
+      res.send(`<script>
+        alert("An email has been sent to your manager. Please wait and check the new password from the reply email.");
+        window.location.href = "/";
+      </script>`);
+    });
   });
 });
 
@@ -102,50 +123,42 @@ router.get('/home', (req, res) => {
 
 // Checkout Route
 router.post("/checkout", async (req, res) => {
-  const { cart } = req.body;
+  const { cart, discountApplied } = req.body;
   const userId = req.session.user?.id || 1;
 
   if (!cart || cart.length === 0) {
     return res.status(400).json({ success: false, error: "Cart is empty" });
   }
 
-  const conn = await dbPromise.getConnection(); // ✅ promise connection
+  const conn = await dbPromise.getConnection();
   try {
     await conn.beginTransaction();
 
-    // Insert sale
-    const total = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
+    const subtotal = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
+    const discount = discountApplied ? subtotal * 0.10 : 0;
+    const taxableAmount = subtotal - discount;
+    const tax = taxableAmount * 0.06;
+    const grandTotal = taxableAmount + tax;
+
     const [saleResult] = await conn.query(
-      "INSERT INTO sales (user_id, total, created_at) VALUES (?, ?, NOW())",
-      [userId, total]
+      "INSERT INTO sales (user_id, subtotal, discount, tax, total, created_at) VALUES (?, ?, ?, ?, ?, NOW())",
+      [userId, subtotal, discount, tax, grandTotal]
     );
     const salesId = saleResult.insertId;
 
-    // Insert history + update stock
     for (const item of cart) {
-      await conn.query(
-        "UPDATE items SET quantity = quantity - ? WHERE id = ?",
-        [item.qty, item.id]
-      );
+      await conn.query("UPDATE items SET quantity = quantity - ? WHERE id = ?", [item.qty, item.id]);
 
-      const [[{ quantity: currentQty }]] = await conn.query(
-        "SELECT quantity FROM items WHERE id = ?",
-        [item.id]
-      );
+      const [[{ quantity: currentQty }]] = await conn.query("SELECT quantity FROM items WHERE id = ?", [item.id]);
 
       await conn.query(
-        `INSERT INTO history 
-          (item_id, user_id, sales_id, action, amount, current_quantity, created_at) 
+        `INSERT INTO history (item_id, user_id, sales_id, action, amount, current_quantity, created_at) 
          VALUES (?, ?, ?, 'sales', ?, ?, NOW())`,
         [item.id, userId, salesId, item.qty, currentQty]
       );
     }
 
-    // Get cashier name
-    const [[user]] = await conn.query(
-      "SELECT username FROM users WHERE id = ?",
-      [userId]
-    );
+    const [[user]] = await conn.query("SELECT username FROM users WHERE id = ?", [userId]);
 
     await conn.commit();
 
@@ -154,7 +167,10 @@ router.post("/checkout", async (req, res) => {
       salesId,
       cashier: user?.username || "Unknown",
       items: cart,
-      total
+      subtotal,
+      discount,
+      tax,
+      grandTotal
     });
   } catch (err) {
     await conn.rollback();
@@ -163,52 +179,6 @@ router.post("/checkout", async (req, res) => {
   } finally {
     conn.release();
   }
-});
-
-router.get("/history", (req, res) => {
-  const { months, start_date, end_date, q } = req.query;
-
-  let sql = `
-    SELECT s.id, u.name AS cashier_name, s.total, s.created_at
-    FROM sales s
-    JOIN users u ON s.user_id = u.id
-    WHERE 1=1
-  `;
-  const params = [];
-
-  // Search by cashier name
-  if (q) {
-    sql += " AND u.name LIKE ?";
-    params.push(`%${q}%`);
-  }
-
-  // Filter last X months
-  if (months) {
-    sql += " AND s.created_at >= DATE_SUB(NOW(), INTERVAL ? MONTH)";
-    params.push(Number(months));
-  }
-
-  // Filter by date range
-  if (start_date && end_date) {
-    sql += " AND DATE(s.created_at) BETWEEN ? AND ?";
-    params.push(start_date, end_date);
-  }
-
-  sql += " ORDER BY s.created_at DESC";
-
-  db.query(sql, params, (err, results) => {
-    if (err) {
-      console.error(err);
-      return res.send("Database error");
-    }
-
-    res.render("history", {
-      history: results,
-      search: q || "",
-      start_date,
-      end_date
-    });
-  });
 });
 
 router.get("/history/:id/detail", (req, res) => {

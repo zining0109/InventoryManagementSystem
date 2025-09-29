@@ -33,7 +33,14 @@
         </div>
       </div>
       <ul id="cart-items"></ul>
-      <p id="cart-total">Total (RM): 0.00</p>
+      <p id="subtotal">Subtotal : RM 0.00</p>
+      <p id="discount">Discount (10%): RM 0.00</p>
+      <p id="tax">Tax (6%): RM 0.00 </p>
+      <p>
+        <label for="apply-discount">Apply 10% Discount</label>
+        <input type="checkbox" id="apply-discount">
+      </p>
+      <p id="cart-total">Total: RM 0.00</p>
       <button id="checkout-btn">Check Out</button>
     </div>
   </div>
@@ -252,10 +259,10 @@
   function updateCart() {
     const cartList = document.getElementById("cart-items");
     cartList.innerHTML = "";
-    let total = 0;
+    let subtotal = 0;
     cart.forEach((item, idx) => {
       const itemTotal = item.price * item.qty;
-      total += itemTotal;
+      subtotal += itemTotal;
       cartList.innerHTML += `
         <li>
           ${item.name} x${item.qty} @ RM${item.price.toFixed(2)} = RM${itemTotal.toFixed(2)}
@@ -263,8 +270,23 @@
         </li>
       `;
     });
-    document.getElementById("cart-total").innerText = `Total (RM): ${total.toFixed(2)}`;
+
+    const discountEnabled = document.getElementById("apply-discount").checked;
+    const discount = discountEnabled ? subtotal * 0.10 : 0;
+    const taxableAmount = subtotal - discount;
+    const tax = taxableAmount * 0.06;
+    const grandTotal = taxableAmount + tax;
+
+    document.getElementById("subtotal").innerText = `Subtotal: RM${subtotal.toFixed(2)}`;
+    document.getElementById("tax").innerText = `Tax (6%): RM${tax.toFixed(2)}`;
+    document.getElementById("discount").innerText = `Discount (10%): RM${discount.toFixed(2)}`;
+    document.getElementById("cart-total").innerText = `Total: RM${grandTotal.toFixed(2)}`;
+
   }
+
+  document.getElementById("apply-discount").addEventListener("change", updateCart);
+
+  updateCart();
 
   window.removeCartItem = function(idx) {
     cart.splice(idx, 1);
@@ -290,12 +312,14 @@
       return;
     }
 
+    const discountApplied = document.getElementById("apply-discount").checked;
+
     try {
-      const res = await fetch("/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cart })
-      });
+    const res = await fetch("/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ cart, discountApplied })
+    });
 
       const data = await res.json();
 
@@ -334,7 +358,10 @@
         html += `
             </tbody>
           </table>
-          <h4 style="text-align:right;">Total: RM${grandTotal.toFixed(2)}</h4>
+          <h4 style="text-align:right;">Subtotal: RM${data.subtotal.toFixed(2)}</h4>
+          <h4 style="text-align:right;">Discount (10%): RM${data.discount.toFixed(2)}</h4>
+          <h4 style="text-align:right;">Tax (6%): RM${data.tax.toFixed(2)}</h4>
+          <h3 style="text-align:right;">Grand Total: RM${data.grandTotal.toFixed(2)}</h3>
         `;
 
         // Inject content
