@@ -181,11 +181,57 @@ router.post("/checkout", async (req, res) => {
   }
 });
 
+router.get("/history", (req, res) => {
+  const { months, start_date, end_date, q } = req.query;
+
+  let sql = `
+    SELECT s.id, u.name AS cashier_name, s.total, s.created_at
+    FROM sales s
+    JOIN users u ON s.user_id = u.id
+    WHERE 1=1
+  `;
+  const params = [];
+
+  // Search by cashier name
+  if (q) {
+    sql += " AND u.name LIKE ?";
+    params.push(`%${q}%`);
+  }
+
+  // Filter last X months
+  if (months) {
+    sql += " AND s.created_at >= DATE_SUB(NOW(), INTERVAL ? MONTH)";
+    params.push(Number(months));
+  }
+
+  // Filter by date range
+  if (start_date && end_date) {
+    sql += " AND DATE(s.created_at) BETWEEN ? AND ?";
+    params.push(start_date, end_date);
+  }
+
+  sql += " ORDER BY s.created_at DESC";
+
+  db.query(sql, params, (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.send("Database error");
+    }
+
+    res.render("history", {
+      history: results,
+      search: q || "",
+      start_date,
+      end_date
+    });
+  });
+});
+
 router.get("/history/:id/detail", (req, res) => {
   const { id } = req.params;
 
   const sql = `
-    SELECT s.id, s.total, s.created_at, u.name AS cashier_name,
+    SELECT s.id, s.subtotal, s.discount, s.tax, s.total, s.created_at, u.name AS cashier_name,
            i.name AS item_name, i.price, h.amount
     FROM sales s
     JOIN users u ON s.user_id = u.id

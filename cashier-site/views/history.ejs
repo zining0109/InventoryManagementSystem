@@ -161,6 +161,9 @@
 
         const footer = `
           <hr>
+          <p><strong>Subtotal:</strong> RM ${Number(data[0].subtotal).toFixed(2)}</p>
+          <p><strong>Discount:</strong> -RM ${Number(data[0].discount).toFixed(2)}</p>
+          <p><strong>Tax:</strong> RM ${Number(data[0].tax).toFixed(2)}</p> 
           <p><strong>Total:</strong> RM ${Number(data[0].total).toFixed(2)}</p>
         `;
 
