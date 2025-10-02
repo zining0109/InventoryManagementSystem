@@ -769,7 +769,6 @@ router.get("/search-barcode", (req, res) => {
   });
 });
 
-
 // Inbound (increase quantity)
 router.post('/inbound/:id', (req, res) => {
   const { amount } = req.body;
