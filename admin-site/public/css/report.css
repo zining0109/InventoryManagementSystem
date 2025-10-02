@@ -1,0 +1,126 @@
+/* Dropdown container */
+.custom-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+/* Dropdown menu */
+.custom-dropdown-menu {
+    display: none;
+    position: absolute;
+    background-color: white;
+    min-width: 150px;
+    border: 1px solid rgba(0, 0, 0, 0.3);
+    box-sizing: border-box;
+    border-radius: 5px;
+    z-index: 1000;
+    top: 35px;
+}
+
+.custom-dropdown-menu a {
+    display: block;
+    padding: 8px 12px;
+    text-decoration: none;
+    color: black;
+    font-size: 14px;
+    font-family: inherit; 
+    font-weight: normal;
+}
+
+.custom-dropdown-menu a:hover {
+    background-color: #f1f1f1;
+}
+
+/* Show when active */
+.custom-dropdown.show .custom-dropdown-menu {
+    display: block;
+}
+
+.card {
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  padding: 20px;
+  margin: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+  font-size: 20px;
+  font-weight: bold;
+  margin-bottom: 20px;
+}
+
+.report-layout {
+  display: grid;
+  grid-template-columns: 1fr; /* 1 column by default */
+  gap: 20px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+table {
+  width: 100%;
+}
+
+.charts-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* Two equal-width columns */
+  gap: 20px;
+}
+
+td {
+    text-align: left;
+    padding: 20px;
+}
+
+.sales {
+  max-width: 1000px;
+}
+
+.month {
+  text-align: center;
+}
+
+select {
+  border-radius: 5px;
+  box-sizing: border-box;
+  border: 1px solid rgba(0, 0, 0, 0.3);
+}
+
+.date-menu {
+  display: none;
+  position: absolute;
+  top: 35px;
+  background-color: white;
+  border: 1px solid rgba(0, 0, 0, 0.3);
+  border-radius: 5px;
+  padding: 10px;
+  z-index: 1000;
+  width: 200px;
+  margin-left: 33%;
+  margin-top: 14%;
+  justify-content: center;
+}
+
+.date-menu label {
+  font-size: 14px;
+  font-weight: normal;
+}
+
+.date-menu input {
+  margin-top: 5px;
+  margin-left: 5px;
+  border-radius: 5px;
+  box-sizing: border-box;
+  border: 1px solid rgba(0, 0, 0, 0.3);
+}
+
+.date-menu button {
+  margin-top: 10px;
+  padding: 5px 10px;
+  border: none;
+  background-color: #0078D7;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+}
