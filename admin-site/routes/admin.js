@@ -239,7 +239,6 @@ router.post("/edit-profile", (req, res) => {
 
   const { work_id, username, password, confirmPassword, email, name, id_no, age, gender, contact_no } = req.body;
   const userId = req.session.user.id;
-  const userRole = req.session.user.role;
 
   // 1. Validate password if being updated
   if (password || confirmPassword) {
@@ -247,18 +246,6 @@ router.post("/edit-profile", (req, res) => {
       return res.send(`
         <script>
           alert("Passwords do not match. Please enter again.");
-          window.location.href = "/edit-profile";
-        </script>
-      `);
-    }
-  }
-
-  // 2. Validate work_id rule for managers
-  if (userRole === "manager") {
-    if (!/^A/.test(work_id)) {
-      return res.send(`
-        <script>
-          alert("Manager Work ID must start with 'A'.");
           window.location.href = "/edit-profile";
         </script>
       `);
@@ -294,9 +281,9 @@ router.post("/edit-profile", (req, res) => {
     // Build update query dynamically
     let sql = `
       UPDATE users 
-      SET work_id = ?, username = ?, email = ?, name = ?, id_no = ?, age = ?, gender = ?, contact_no = ?
+      SET username = ?, email = ?, name = ?, id_no = ?, age = ?, gender = ?, contact_no = ?
     `;
-    const params = [work_id, username, email, name, id_no, age, gender, contact_no, userId];
+    const params = [username, email, name, id_no, age, gender, contact_no, userId];
 
     if (password) {
       sql += `, password = ?`;
@@ -312,7 +299,6 @@ router.post("/edit-profile", (req, res) => {
       }
 
       // update session data too
-      req.session.user.work_id = work_id;
       req.session.user.username = username;
       req.session.user.email = email;
       req.session.user.name = name;
@@ -322,7 +308,7 @@ router.post("/edit-profile", (req, res) => {
       req.session.user.contact_no = contact_no;
 
       if (password) {
-        req.session.user.password = password; // ⚠️ best practice: hash this before storing
+        req.session.user.password = password; // best practice: hash this before storing
       }
 
       res.send(`
@@ -334,7 +320,6 @@ router.post("/edit-profile", (req, res) => {
     });
   });
 });
-
 
 router.get('/inventory', (req, res) => {
   const searchQuery = req.query.q;
@@ -879,12 +864,93 @@ router.get("/api/report/sales-report", (req, res) => {
           if (err) return res.status(500).json({ error: "Failed category revenue" });
           report.categoryRevenues = catRows;
 
-          res.json(report); // ✅ final response
+          res.json(report); // final response
         });
       });
     });
   });
 });
+
+router.get("/api/report/stock-level", (req, res) => {
+  let start_date = req.query.start_date;
+  let end_date = req.query.end_date;
+
+  if (!end_date) {
+    end_date = new Date().toISOString().slice(0, 10);
+  }
+  if (!start_date) {
+    const d = new Date(end_date);
+    d.setDate(d.getDate() - 6);
+    start_date = d.toISOString().slice(0, 10);
+  }
+
+  const sql = `
+    WITH RECURSIVE dates AS (
+      SELECT ? AS dt
+      UNION ALL
+      SELECT DATE_ADD(dt, INTERVAL 1 DAY) FROM dates WHERE dt < ?
+    ),
+    daily AS (
+      SELECT
+        i.id AS item_id,
+        i.name,
+        d.dt AS date,
+        COALESCE(SUM(
+          CASE
+            WHEN h.action = 'inbound' THEN h.amount
+            WHEN h.action IN ('outbound','sales') THEN -h.amount
+            ELSE 0
+          END
+        ), 0) AS movement
+      FROM dates d
+      CROSS JOIN items i
+      LEFT JOIN history h
+        ON h.item_id = i.id
+       AND DATE(h.created_at) = d.dt
+      GROUP BY i.id, i.name, d.dt
+    ),
+    opening AS (
+      -- opening at start_date = current quantity - movements from start_date to now
+      SELECT
+        i.id AS item_id,
+        COALESCE(i.quantity,0) -
+        COALESCE(SUM(
+          CASE
+            WHEN h.created_at >= ? AND h.action = 'inbound' THEN h.amount
+            WHEN h.created_at >= ? AND h.action IN ('outbound','sales') THEN -h.amount
+            ELSE 0
+          END
+        ), 0) AS opening_qty
+      FROM items i
+      LEFT JOIN history h ON h.item_id = i.id
+      GROUP BY i.id, i.quantity
+    )
+    SELECT
+      d.date,
+      d.item_id,
+      d.name,
+      o.opening_qty,
+      d.movement,
+      (o.opening_qty +
+        SUM(d.movement) OVER (PARTITION BY d.item_id ORDER BY d.date
+                              ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)
+      ) AS stock_level
+    FROM daily d
+    JOIN opening o ON o.item_id = d.item_id
+    ORDER BY d.item_id, d.date;
+  `;
+
+  // parameters: start_date, end_date for dates CTE; then start_date twice for opening calc
+  db.query(sql, [start_date, end_date, start_date, start_date], (err, rows) => {
+    if (err) {
+      console.error("stock-level sql error:", err);
+      return res.status(500).json({ error: "Failed to load stock level" });
+    }
+    // rows: each row has date, item_id, name, opening_qty, movement, stock_level
+    res.json(rows);
+  });
+});
+
 
 // Export router so server.js can use it
 module.exports = router;

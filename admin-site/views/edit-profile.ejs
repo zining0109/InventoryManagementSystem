@@ -73,8 +73,8 @@
         <form id="editForm" action="/edit-profile" method="POST" class="form-grid">
           <!-- LEFT SIDE -->
           <div class="form-group">
-            <label>Work ID</label>
-            <input type="text" name="work_id" value="<%= user.work_id %>" required>
+            <p>Work ID</p>
+            <p><%= user.work_id %></p>
 
             <label>Username</label>
             <input type="text" name="username" value="<%= user.username %>" required>
@@ -110,7 +110,7 @@
             <label>Contact No</label>
             <input type="text" name="contact_no" value="<%= user.contact_no %>" required>
 
-            <label>Role</label>
+            <p>Role</p>
             <p><%= user.role %></p>
           </div>
             

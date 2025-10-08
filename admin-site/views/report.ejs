@@ -101,6 +101,13 @@
           </form>
         </div>
       </div>
+      <div class="date-menu" id="dateInput">
+        <form id="dateFilterForm" style="display: flex; flex-direction: column; gap: 8px; background-color: white;">
+          <label>Select Date: </label>
+          <input type="date" name="specific_date" id="specific_date" onchange="loadInventoryFlow()">
+          <button type="submit" class="btn btn-outline-primary">Apply</button>
+        </form>
+      </div>
     <div class="month" id="monthInput">
         <label for="monthSelect"><strong>Select Month:</strong></label>
         <select id="monthSelect"></select>
@@ -221,6 +228,7 @@ function loadStockOnHand() {
   document.getElementById("categoryRevenuePieChart").style.display = "none";
   document.getElementById("monthInput").style.display = "none";
   document.getElementById("reportChart").style.display = "block";
+  document.getElementById("dateInput").style.display = "none";
   fetch("/api/report/stock-on-hand")
     .then(res => res.json())
     .then(data => {
@@ -303,7 +311,16 @@ document.getElementById("dateFilterForm").addEventListener("submit", (e) => {
   e.preventDefault();
   const start = document.getElementById("start_date").value;
   const end = document.getElementById("end_date").value;
-  loadStockMovement(start, end);
+
+  // detect current report
+  const currentReport = document.getElementById("report-title").innerText;
+
+  if (currentReport.includes("Stock Movement")) {
+    loadStockMovement(start, end);
+  } else if (currentReport.includes("Stock Level")) {
+    loadStockLevel(start, end);
+  }
+
   dateMenu.style.display = "none"; // close after apply
 });
 
@@ -314,6 +331,8 @@ function loadStockMovement(start_date, end_date) {
   document.getElementById("monthInput").style.display = "none";
   document.getElementById("reportChart").style.display = "block";
   document.getElementById("date-filter").style.display = "block";
+  document.getElementById("dateInput").style.display = "none";
+
   // if no dates passed → default last 7 days
   if (!end_date) {
     const today = new Date();
@@ -408,6 +427,7 @@ function loadSalesReport(monthYear) {
   document.getElementById("itemRevenuePieChart").style.display = "block";
   document.getElementById("categoryRevenuePieChart").style.display = "block";
   document.getElementById("monthInput").style.display = "block";
+  document.getElementById("dateInput").style.display = "none";
 
   // default to current month
   if (!monthYear) {
@@ -495,31 +515,119 @@ function loadCategoryRevenueChart(categoryRevenues) {
   });
 }
 
-function loadStockLevel() {
+function loadStockLevel(start_date, end_date) {
   document.getElementById("reportChart").style.display = "block";
   document.getElementById("salesSummary").style.display = "none";
   document.getElementById("itemRevenuePieChart").style.display = "none";
   document.getElementById("categoryRevenuePieChart").style.display = "none";
   document.getElementById("monthInput").style.display = "none";
   document.getElementById("date-filter").style.display = "block";
+  document.getElementById("dateInput").style.display = "none";
+
+  if (!end_date) {
+    end_date = new Date().toISOString().split("T")[0];
+  }
+  if (!start_date) {
+    const start = new Date(end_date);
+    start.setDate(start.getDate() - 6);
+    start_date = start.toISOString().split("T")[0];
+  }
+
+  fetch(`/api/report/stock-level?start_date=${start_date}&end_date=${end_date}`)
+    .then(res => res.json())
+    .then(rows => {
+      if (!rows || rows.length === 0) {
+        // nothing to plot
+        if (window.reportChartInstance) window.reportChartInstance.destroy();
+        return;
+      }
+
+      // build sorted date list from start_date..end_date (ensures consistent order)
+      const dateList = [];
+      const s = new Date(start_date);
+      const e = new Date(end_date);
+      for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
+        // format as yyyy-mm-dd to match backend
+        dateList.push(d.toISOString().slice(0,10));
+      }
+
+      // group stock_level by item (map date -> stock_level)
+      const byItem = {};
+      rows.forEach(r => {
+        const name = r.name;
+        if (!byItem[name]) byItem[name] = {};
+        // ensure numeric
+        const lvl = Number(r.stock_level);
+        byItem[name][r.date] = isNaN(lvl) ? 0 : lvl;
+      });
+
+      // create datasets; ensure every date has a value (fill forward if necessary)
+      const colors = (n) => `hsl(${(n*47)%360}, 70%, 45%)`; // simple color generator
+      const datasets = Object.keys(byItem).map((name, idx) => {
+        const dateMap = byItem[name];
+        const dataPoints = [];
+        let last = null;
+        dateList.forEach(d => {
+          // if backend returned stock_level, use it; otherwise carry last value (flat)
+          if (dateMap.hasOwnProperty(d)) {
+            last = Number(dateMap[d]);
+          }
+          // if last is still null (no data before this date) set to 0
+          const value = last === null ? 0 : last;
+          dataPoints.push({ x: d, y: value });
+        });
+        return {
+          label: name,
+          data: dataPoints,
+          borderColor: colors(idx),
+          backgroundColor: colors(idx),
+          fill: false,
+          tension: 0.2,
+          pointRadius: 3
+        };
+      });
+
+      // render chart
+      const ctx = document.getElementById("reportChart").getContext("2d");
+      if (window.reportChartInstance) window.reportChartInstance.destroy();
+      window.reportChartInstance = new Chart(ctx, {
+        type: "line",
+        data: { datasets },
+        options: {
+          responsive: true,
+          plugins: { legend: { position: "top" } },
+          scales: {
+            x: {
+              type: "time",
+              time: { unit: "day", tooltipFormat: "yyyy-MM-dd" },
+              title: { display: true, text: "Date" }
+            },
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: "Stock Quantity" }
+            }
+          }
+        }
+      });
+    })
+    .catch(err => {
+      console.error("Failed to load stock level report:", err);
+    });
+}
+
+function loadInventoryFlow() {
+  document.getElementById("reportChart").style.display = "block";
+  document.getElementById("salesSummary").style.display = "none";
+  document.getElementById("itemRevenuePieChart").style.display = "none";
+  document.getElementById("categoryRevenuePieChart").style.display = "none";
+  document.getElementById("monthInput").style.display = "none";
+  document.getElementById("date-filter").style.display = "block";
+  document.getElementById("dateInput").style.display = "block";
+
+
 
 
 }
-
-// Toggle calendar menu
-const calendarIcon = document.querySelector('.calendar-icon');
-const dateMenu = document.querySelector('.date-menu');
-
-calendarIcon.addEventListener('click', () => {
-  dateMenu.style.display = dateMenu.style.display === 'block' ? 'none' : 'block';
-});
-
-// Optional: close if click outside
-document.addEventListener('click', (event) => {
-  if (!event.target.closest('.date-filter')) {
-    dateMenu.style.display = 'none';
-  }
-});
 
 </script>
 </body>
