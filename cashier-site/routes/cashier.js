@@ -127,7 +127,7 @@ router.post("/checkout", async (req, res) => {
   const userId = req.session.user?.id || 1;
 
   if (!cart || cart.length === 0) {
-    return res.status(400).json({ success: false, error: "Cart is empty" });
+    return res.status(400).json({ success: false, error: "Cart is empty." });
   }
 
   const conn = await dbPromise.getConnection();
@@ -158,14 +158,14 @@ router.post("/checkout", async (req, res) => {
       );
     }
 
-    const [[user]] = await conn.query("SELECT username FROM users WHERE id = ?", [userId]);
+    const [[user]] = await conn.query("SELECT username, name FROM users WHERE id = ?", [userId]);
 
     await conn.commit();
 
     res.json({
       success: true,
       salesId,
-      cashier: user?.username || "Unknown",
+      cashier: user?.name || "Unknown",
       items: cart,
       subtotal,
       discount,

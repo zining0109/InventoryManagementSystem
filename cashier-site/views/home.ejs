@@ -268,7 +268,7 @@
       cartList.innerHTML += `
         <li>
           ${item.name} x${item.qty} @ RM${item.price.toFixed(2)} = RM${itemTotal.toFixed(2)}
-          <button onclick="removeCartItem(${idx})" style="margin-left:20px; background-color: red; color: white; border: none; border-radius: 5px; cursor: pointer; width: 55px; height: 28px;">Delete</button>
+          <button onclick="removeCartItem(${idx})" style="background-color: red; color: white; border: none; border-radius: 5px; cursor: pointer; width: 55px; height: 28px;">Delete</button>
         </li>
       `;
     });
@@ -310,7 +310,7 @@
   
   document.getElementById("checkout-btn").addEventListener("click", async function () {
     if (cart.length === 0) {
-      alert("Cart is empty!");
+      alert("Cart is empty.");
       return;
     }
 
