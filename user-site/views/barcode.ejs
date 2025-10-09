@@ -141,7 +141,7 @@ function closeModal(id) {
   const modal = document.getElementById(id);
     modal.style.display = "none";
 
-    // 🔹 Clear input and result when modal closes
+    // Clear input and result when modal closes
     if (id === "barcodeModal") {
       document.getElementById("barcodeInput").value = "";
       document.getElementById("barcodeResult").innerHTML = "";

@@ -21,7 +21,7 @@ router.post('/login', async (req, res) => {
       const user = results[0];
 
       // Successful login
-      req.session.username = results[0].username; // store user ID in session
+      req.session.username = results[0].username; // Store user ID in session
 
       // Save full user object in session
       req.session.user = {
@@ -159,7 +159,7 @@ router.get('/profile', (req, res) => {
       return res.status(404).send('User not found');
     }
 
-    res.render('profile', { user: results[0] }); // send user data to EJS
+    res.render('profile', { user: results[0] }); // Send user data to EJS
   });
 });
 
@@ -208,10 +208,10 @@ router.post('/edit-profile', (req, res) => {
 // Configure storage
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, "../..", "uploads/items")); // folder for uploads
+    cb(null, path.join(__dirname, "../..", "uploads/items")); // Folder for uploads
   },
   filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname)); // unique filename
+    cb(null, Date.now() + path.extname(file.originalname)); // Unique filename
   }
 });
 
@@ -230,7 +230,7 @@ const upload = multer({
  
 router.get('/item', (req, res) => {
   const searchQuery = req.query.q;
-  const statusFilter = req.query.status; // get status from query
+  const statusFilter = req.query.status; // Get status from query
   let params = [];
 
   let query = `
@@ -246,7 +246,7 @@ router.get('/item', (req, res) => {
     params = [searchTerm, searchTerm];
   }
 
-  // Status filter (Active, Low, Out)
+  // Status filter (In, Low, Out)
   if (statusFilter) {
     const whereOrAnd = query.includes("WHERE") ? " AND" : " WHERE";
     if (statusFilter === "in") {
@@ -354,7 +354,7 @@ router.post("/item/edit/:id", upload.single("image"), (req, res) => {
   const id = req.params.id;
   const { name, sku, category_id, color, price, barcode, description } = req.body;
 
-  // 1. Check if SKU already exists for another item
+  // Step 1: Check if SKU already exists for another item
   const checkSkuSql = "SELECT id FROM items WHERE sku = ? AND id <> ?";
   db.query(checkSkuSql, [sku, id], (err, skuResults) => {
     if (err) {
@@ -370,7 +370,7 @@ router.post("/item/edit/:id", upload.single("image"), (req, res) => {
       `);
     }
 
-    // 2. Check if Barcode already exists for another item
+    // Step 2: Check if Barcode already exists for another item
     const checkBarcodeSql = "SELECT id FROM items WHERE barcode = ? AND id <> ?";
     db.query(checkBarcodeSql, [barcode, id], (err, barcodeResults) => {
       if (err) {
@@ -386,7 +386,7 @@ router.post("/item/edit/:id", upload.single("image"), (req, res) => {
         `);
       }
 
-      // 3. If passed validation → proceed with update
+      // Step 3: If passed validation → proceed with update
       let imageQuery = "";
       let params = [name, sku, category_id, color, price, barcode, description];
 
@@ -495,7 +495,7 @@ router.post("/add-item", upload.single("image"), (req, res) => {
 
   const image = req.file ? req.file.filename : "default.png";
 
-  // 1. Check if SKU already exists
+  // Step 1: Check if SKU already exists
   const checkSkuSql = "SELECT id FROM items WHERE sku = ?";
   db.query(checkSkuSql, [sku], (err, skuResults) => {
     if (err) {
@@ -511,7 +511,7 @@ router.post("/add-item", upload.single("image"), (req, res) => {
       `);
     }
 
-    // 2. Check if Barcode already exists
+    // Step 2: Check if Barcode already exists
     const checkBarcodeSql = "SELECT id FROM items WHERE barcode = ?";
     db.query(checkBarcodeSql, [barcode], (err, barcodeResults) => {
       if (err) {
@@ -527,7 +527,7 @@ router.post("/add-item", upload.single("image"), (req, res) => {
         `);
       }
 
-      // 3. If passed validation → insert new item
+      // Step 3: If passed validation → insert new item
       const sql = `
         INSERT INTO items (name, sku, category_id, color, quantity, price, barcode, description, image)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -581,7 +581,7 @@ router.get('/category/:id/items', (req, res) => {
       console.error(err);
       return res.status(500).json({ error: 'Database error' });
     }
-    res.json(results); // return items as JSON
+    res.json(results); // Return items as JSON
   });
 });
 
@@ -773,7 +773,7 @@ router.get("/search-barcode", (req, res) => {
 router.post('/inbound/:id', (req, res) => {
   const { amount } = req.body;
   const itemId = req.params.id;
-  const userId = req.session.user?.id; // get logged-in user id from session
+  const userId = req.session.user?.id; // Get logged-in user id from session
 
   if (!userId) {
     return res.status(401).send("Unauthorized: Please log in");
@@ -786,13 +786,13 @@ router.post('/inbound/:id', (req, res) => {
       return res.status(500).send("Database error");
     }
 
-    // get current quantity
+    // Get current quantity
     db.query("SELECT quantity FROM items WHERE id = ?", [itemId], (err, result) => {
       if (err) return res.status(500).send("Database error");
 
       const currentQty = result[0].quantity;
 
-      // log to history
+      // Log to history
       const sqlHistory = `
         INSERT INTO history (item_id, user_id, action, amount, current_quantity)
         VALUES (?, ?, 'inbound', ?, ?)
@@ -815,7 +815,7 @@ router.post('/inbound/:id', (req, res) => {
 router.post('/outbound/:id', (req, res) => {
   const itemId = req.params.id;
   const { amount } = req.body;
-  const userId = req.session.user?.id; // get logged-in user id from session
+  const userId = req.session.user?.id; // Get logged-in user id from session
 
   if (!userId) {
     return res.status(401).send("Unauthorized: Please log in");
@@ -835,13 +835,13 @@ router.post('/outbound/:id', (req, res) => {
       `);
     }
 
-    // get current quantity
+    // Get current quantity
     db.query("SELECT quantity FROM items WHERE id = ?", [itemId], (err, result) => {
       if (err) return res.status(500).send("Database error");
 
       const currentQty = result[0].quantity;
 
-      // log to history
+      // Log to history
       const sqlHistory = `
         INSERT INTO history (item_id, user_id, action, amount, current_quantity)
         VALUES (?, ?, 'outbound', ?, ?)
