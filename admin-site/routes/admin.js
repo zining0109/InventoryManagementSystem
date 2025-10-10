@@ -576,7 +576,7 @@ router.get('/user/delete/:id', (req, res) => {
 router.get('/user/edit/:id', (req, res) => {
   const userId = req.params.id;
 
-  // Available roles (excluding manager if you want)
+  // Available roles
   const roles = ["Warehouse Staff", "Store Cashier"];
 
   const sql = `SELECT * FROM users WHERE id = ?`;
@@ -653,7 +653,7 @@ router.post('/user/edit/:id', (req, res) => {
         // Step 5: update user (conditionally update password)
         let sql, params;
         if (password && password !== userCurrentPassword) {
-          // update with new password
+          // Update with new password
           sql = `
             UPDATE users SET
               work_id=?, name=?, id_no=?, username=?, password=?, email=?, role=?, gender=?, age=?, contact_no=?
@@ -661,7 +661,7 @@ router.post('/user/edit/:id', (req, res) => {
           `;
           params = [work_id, name, id_no, username, password, email, role, gender, age, contact_no, userId];
         } else {
-          // update without changing password
+          // Update without changing password
           sql = `
             UPDATE users SET
               work_id=?, name=?, id_no=?, username=?, email=?, role=?, gender=?, age=?, contact_no=?
@@ -675,9 +675,9 @@ router.post('/user/edit/:id', (req, res) => {
           res.send(`<script>alert("User updated successfully."); window.location.href='/user/${userId}';</script>`);
         });
 
-      }); // end checkWorkId
-    }); // end checkUsername
-  }); // end fetch current password
+      }); // End checkWorkId
+    }); // End checkUsername
+  }); // End fetch current password
 });
 
 router.get('/history', (req, res) => {
