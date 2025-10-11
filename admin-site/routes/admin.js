@@ -419,7 +419,7 @@ router.get('/item/:id', (req, res) => {
 
 router.get('/user', (req, res) => {
   const searchQuery = req.query.q;
-  const roleFilter = req.query.role; // get role from query params
+  const roleFilter = req.query.role; // Get role from query params
   let params = [];
 
   let query = `
