@@ -163,20 +163,23 @@ router.get('/profile', (req, res) => {
   });
 });
 
-router.get('/edit-profile', (req, res) => {
-  res.render('edit-profile'); // Renders views/login.ejs
-});
-
 // Show edit profile form
 router.get('/edit-profile', (req, res) => {
-  const username = req.session.username;
-  if (username) {
+  if (!req.session.user) {
     return res.redirect('/login');
   }
+
+  const userId = req.session.user.id;
+
   db.query('SELECT * FROM users WHERE id = ?', [userId], (err, results) => {
-    if (err || results.length === 0) {
-      return res.send('User not found');
-    }
+      if (err) {
+        console.error("Database error:", err);
+        return res.status(500).send("Database error");
+      }
+      if (results.length === 0) {
+        return res.status(404).send("User not found");
+      }
+
     res.render('edit-profile', { user: results[0] });
   });
 });
