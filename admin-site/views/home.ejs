@@ -66,7 +66,17 @@
     </div>
     <hr>
     <div class="container2">
-      <h2>Dashboard</h2>
+      <h2>Dashboard 
+        <i id="bellIcon" class="bi bi-bell-fill" style="margin-left: 1030px; position: relative; cursor: pointer;">
+          <span class="bell-dot" 
+            style="display:none; position:absolute; top:0; right:0; width:10px; height:10px; background:red; border-radius:50%;">
+          </span>
+        </i>
+      </h2>
+    </div>
+    <!-- Notification Modal -->
+    <div id="notificationModal" style="display:none; position:absolute; background:white; border:1px solid rgba(0, 0, 0, 0.3); border-radius: 5px; padding:8px 12px; width:250px; top:140px; right:30px; z-index: 1000;">
+      <ul id="notificationList"></ul>
     </div>
     <hr>
     <div class="container3">
@@ -167,6 +177,74 @@
         }
       }]
     });
+  });
+</script>
+<script>
+async function loadNotifications() {
+  const res = await fetch('/notifications');
+  const data = await res.json();
+
+  const unread = data.filter(n => n.is_read === 0); // ✅ use your actual DB column
+  const dot = document.querySelector('.bell-dot');
+  const list = document.getElementById('notificationList');
+
+  // 🔴 Show red dot if there are unread notifications
+  dot.style.display = unread.length > 0 ? 'block' : 'none';
+
+  // 📝 Render all notifications
+  list.innerHTML = '';
+  if (data.length === 0) {
+    list.innerHTML = '<li>No notifications</li>';
+  } else {
+    data.forEach(n => {
+      list.innerHTML += `
+        <li style="padding: 5px 0; border-bottom: 1px solid #eee;">
+          <strong>${n.item_name}</strong> - ${n.status}<br>
+          <small>${new Date(n.created_at).toLocaleString()}</small>
+        </li>`;
+    });
+  }
+}
+
+// 🔔 Toggle modal + mark as read
+document.getElementById('bellIcon').addEventListener('click', async () => {
+  const modal = document.getElementById('notificationModal');
+  const isVisible = modal.style.display === 'block';
+  modal.style.display = isVisible ? 'none' : 'block';
+
+  if (!isVisible) {
+    // Only mark as read when opening modal
+    await fetch('/notifications/mark-read', { method: 'POST' });
+    document.querySelector('.bell-dot').style.display = 'none';
+  }
+});
+
+// 🚀 Load on page start
+loadNotifications();
+
+// 🔄 Optional: auto-refresh notifications
+setInterval(loadNotifications, 60000);
+</script>
+
+<!-- 📡 Real-time updates -->
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  const socket = io();
+
+  socket.on('notification', (data) => {
+    const dot = document.querySelector('.bell-dot');
+    dot.style.display = 'block'; // 🔴 Show red dot immediately
+
+    const list = document.getElementById('notificationList');
+    const time = new Date(data.time).toLocaleString();
+
+    // Add new notification to the top of the list
+    list.insertAdjacentHTML('afterbegin', `
+      <li style="padding: 5px 0; border-bottom: 1px solid #eee;">
+        <strong>${data.item_name}</strong> - ${data.status}<br>
+        <small>${time}</small>
+      </li>
+    `);
   });
 </script>
 </body>

@@ -951,6 +951,98 @@ router.get("/api/report/stock-level", (req, res) => {
   });
 });
 
+router.get('/check-stock', (req, res) => {
+  const io = req.app.get('io');
+  const now = new Date();
+
+  db.query('SELECT id AS item_id, name, quantity FROM items', (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+
+    results.forEach(item => {
+      let alertStatus = null;
+
+      if (item.quantity === 0) alertStatus = 'Out of Stock';
+      else if (item.quantity < 5) alertStatus = 'Low Stock';
+
+      if (!alertStatus) return; // no alert needed
+
+      // check for existing unread notification for same item + status
+      const checkQuery = `
+        SELECT id FROM notifications
+        WHERE item_id = ? AND status = ? AND is_read = 0
+        LIMIT 1
+      `;
+      db.query(checkQuery, [item.item_id, alertStatus], (err2, existing) => {
+        if (err2) return console.error(err2);
+
+        if (existing.length === 0) {
+          // insert notification
+          const message = `${item.name} is ${alertStatus} (qty ${item.quantity})`;
+          const insertQuery = `
+            INSERT INTO notifications (item_id, item_name, status, message)
+            VALUES (?, ?, ?, ?)
+          `;
+          db.query(insertQuery, [item.item_id, item.name, alertStatus, message], (err3, insertRes) => {
+            if (err3) return console.error(err3);
+
+            // emit via socket.io (send the inserted id + fields)
+            const notif = {
+              id: insertRes.insertId,
+              item_id: item.item_id,
+              item_name: item.name,
+              status: alertStatus,
+              message,
+              created_at: now.toISOString(),
+              is_read: 0
+            };
+            io.emit('notification', notif);
+            console.log('Emitted new notification:', notif);
+          });
+        }
+      });
+    });
+
+    res.json({ success: true });
+  });
+});
+
+router.get('/notifications', (req, res) => {
+  const query = `SELECT id, item_id, item_name, status, message, created_at, is_read FROM notifications ORDER BY created_at DESC`;
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(results);
+  });
+});
+
+router.post('/notifications/mark-read', (req, res) => {
+  const ids = req.body?.ids; // optional chaining prevents error
+
+  if (Array.isArray(ids) && ids.length > 0) {
+    const placeholders = ids.map(() => '?').join(',');
+    const sql = `UPDATE notifications SET is_read = 1 WHERE id IN (${placeholders})`;
+    db.query(sql, ids, (err) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'DB error' });
+      }
+      res.json({ success: true });
+    });
+  } else {
+    db.query(`UPDATE notifications SET is_read = 1 WHERE is_read = 0`, (err) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'DB error' });
+      }
+      res.json({ success: true });
+    });
+  }
+});
 
 // Export router so server.js can use it
 module.exports = router;
