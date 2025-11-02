@@ -967,9 +967,9 @@ router.get('/check-stock', (req, res) => {
       if (item.quantity === 0) alertStatus = 'Out of Stock';
       else if (item.quantity < 5) alertStatus = 'Low Stock';
 
-      if (!alertStatus) return; // no alert needed
+      if (!alertStatus) return; // No alert needed
 
-      // check for existing unread notification for same item + status
+      // Check for existing unread notification for same item + status
       const checkQuery = `
         SELECT id FROM notifications
         WHERE item_id = ? AND status = ? AND is_read = 0
@@ -979,7 +979,7 @@ router.get('/check-stock', (req, res) => {
         if (err2) return console.error(err2);
 
         if (existing.length === 0) {
-          // insert notification
+          // Insert notification
           const message = `${item.name} is ${alertStatus} (qty ${item.quantity})`;
           const insertQuery = `
             INSERT INTO notifications (item_id, item_name, status, message)
@@ -988,7 +988,7 @@ router.get('/check-stock', (req, res) => {
           db.query(insertQuery, [item.item_id, item.name, alertStatus, message], (err3, insertRes) => {
             if (err3) return console.error(err3);
 
-            // emit via socket.io (send the inserted id + fields)
+            // Emit via socket.io (send the inserted id + fields)
             const notif = {
               id: insertRes.insertId,
               item_id: item.item_id,
@@ -1021,7 +1021,7 @@ router.get('/notifications', (req, res) => {
 });
 
 router.post('/notifications/mark-read', (req, res) => {
-  const ids = req.body?.ids; // optional chaining prevents error
+  const ids = req.body?.ids; // Optional chaining prevents error
 
   if (Array.isArray(ids) && ids.length > 0) {
     const placeholders = ids.map(() => '?').join(',');

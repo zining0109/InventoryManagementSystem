@@ -1,5 +1,5 @@
 const express = require('express');
-const adminRoutes = require('./routes/admin'); // path to routes/admin.js
+const adminRoutes = require('./routes/admin'); // Path to routes/admin.js
 const path = require('path');
 const session = require('express-session');
 const http = require('http');           
@@ -9,9 +9,17 @@ require('dotenv').config();
 
 const app = express();
 
-const server = http.createServer(app); // use this instead of app.listen
-const io = new Server(server); // create socket.io server
-app.set('io', io); // make io accessible in routes if needed
+const server = http.createServer(app); // Use this instead of app.listen
+const io = new Server(server); // Create socket.io server
+app.set('io', io); // Make io accessible in routes if needed
+
+// Run stock check every 1 minute automatically
+setInterval(() => {
+  fetch('http://localhost:3000/check-stock')
+    .then(res => res.json())
+    .then(data => console.log('Auto stock check:', data))
+    .catch(err => console.error('Auto check error:', err));
+}, 60000); // 60,000 ms = 1 minute
 
 app.use(express.json());
 

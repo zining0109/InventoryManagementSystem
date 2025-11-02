@@ -184,14 +184,14 @@ async function loadNotifications() {
   const res = await fetch('/notifications');
   const data = await res.json();
 
-  const unread = data.filter(n => n.is_read === 0); // ✅ use your actual DB column
+  const unread = data.filter(n => n.is_read === 0); // Use your actual DB column
   const dot = document.querySelector('.bell-dot');
   const list = document.getElementById('notificationList');
 
-  // 🔴 Show red dot if there are unread notifications
+  // Show red dot if there are unread notifications
   dot.style.display = unread.length > 0 ? 'block' : 'none';
 
-  // 📝 Render all notifications
+  // Render all notifications
   list.innerHTML = '';
   if (data.length === 0) {
     list.innerHTML = '<li>No notifications</li>';
@@ -206,7 +206,7 @@ async function loadNotifications() {
   }
 }
 
-// 🔔 Toggle modal + mark as read
+// Toggle modal + mark as read
 document.getElementById('bellIcon').addEventListener('click', async () => {
   const modal = document.getElementById('notificationModal');
   const isVisible = modal.style.display === 'block';
@@ -219,21 +219,21 @@ document.getElementById('bellIcon').addEventListener('click', async () => {
   }
 });
 
-// 🚀 Load on page start
+// Load on page start
 loadNotifications();
 
-// 🔄 Optional: auto-refresh notifications
+// Auto-refresh notifications
 setInterval(loadNotifications, 60000);
 </script>
 
-<!-- 📡 Real-time updates -->
+<!-- Real-time updates -->
 <script src="/socket.io/socket.io.js"></script>
 <script>
   const socket = io();
 
   socket.on('notification', (data) => {
     const dot = document.querySelector('.bell-dot');
-    dot.style.display = 'block'; // 🔴 Show red dot immediately
+    dot.style.display = 'block'; // Show red dot immediately
 
     const list = document.getElementById('notificationList');
     const time = new Date(data.time).toLocaleString();
