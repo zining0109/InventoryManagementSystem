@@ -969,7 +969,6 @@ router.get('/check-stock', (req, res) => {
 
       if (!alertStatus) return; // No alert needed
 
-      // Check for existing unread notification for same item + status
       const checkQuery = `
         SELECT id FROM notifications
         WHERE item_id = ? AND status = ? AND is_read = 0
@@ -979,20 +978,17 @@ router.get('/check-stock', (req, res) => {
         if (err2) return console.error(err2);
 
         if (existing.length === 0) {
-          // Insert notification
           const message = `${item.name} is ${alertStatus} (qty ${item.quantity})`;
           const insertQuery = `
-            INSERT INTO notifications (item_id, item_name, status, message)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO notifications (item_id, status, message)
+            VALUES (?, ?, ?)
           `;
-          db.query(insertQuery, [item.item_id, item.name, alertStatus, message], (err3, insertRes) => {
+          db.query(insertQuery, [item.item_id, alertStatus, message], (err3, insertRes) => {
             if (err3) return console.error(err3);
 
-            // Emit via socket.io (send the inserted id + fields)
             const notif = {
               id: insertRes.insertId,
               item_id: item.item_id,
-              item_name: item.name,
               status: alertStatus,
               message,
               created_at: now.toISOString(),
@@ -1010,7 +1006,13 @@ router.get('/check-stock', (req, res) => {
 });
 
 router.get('/notifications', (req, res) => {
-  const query = `SELECT id, item_id, item_name, status, message, created_at, is_read FROM notifications ORDER BY created_at DESC`;
+  const query = `
+    SELECT n.id, n.item_id, i.name AS item_name, n.status, n.message, 
+           n.created_at, n.is_read
+    FROM notifications n
+    JOIN items i ON n.item_id = i.id
+    ORDER BY n.created_at DESC
+  `;
   db.query(query, (err, results) => {
     if (err) {
       console.error(err);

@@ -236,7 +236,7 @@ setInterval(loadNotifications, 60000);
     dot.style.display = 'block'; // Show red dot immediately
 
     const list = document.getElementById('notificationList');
-    const time = new Date(data.time).toLocaleString();
+    const time = new Date(data.created_at).toLocaleString(); // Fixed key name
 
     // Add new notification to the top of the list
     list.insertAdjacentHTML('afterbegin', `
@@ -247,5 +247,6 @@ setInterval(loadNotifications, 60000);
     `);
   });
 </script>
+
 </body>
 </html>
