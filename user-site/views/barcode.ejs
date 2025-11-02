@@ -176,6 +176,9 @@ function closeModal(id) {
     codeReader.reset();
     streamStarted = false;
   }
+
+  document.getElementById("barcodeInput").value = "";
+  document.getElementById("barcodeResult").innerHTML = "";
 }
 
 function searchBarcode(barcodeInput) {
