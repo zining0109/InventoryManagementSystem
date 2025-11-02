@@ -1,5 +1,4 @@
 const express = require('express');
-const userRoutes = require('./routes/user'); // path to routes/user.js
 const path = require('path');
 const session = require('express-session');
 
@@ -13,8 +12,11 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
 // Middleware
+app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: true })); 
+
+const userRoutes = require('./routes/user'); // path to routes/user.js
 
 app.use(session({
   secret: process.env.SESSION_SECRET,

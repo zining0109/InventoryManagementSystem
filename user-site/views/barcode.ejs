@@ -9,6 +9,7 @@
     <link rel="icon" type="image/jpeg" href="/images/favicon.jpg">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/@zxing/library@0.18.6/umd/index.min.js"></script>
 <script>
   document.addEventListener("DOMContentLoaded", () => {
     const links = document.querySelectorAll(".sidebar a");
@@ -92,7 +93,7 @@
         <div class="modal-box">
           <span class="close-btn" onclick="closeModal('barcodeModal')">&times;</span>
           <h2>Barcode Scan</h2>
-          <p>No scanner supported.</p>
+          <video id="reader" style="width:300px; margin-bottom:20px;" autoplay muted></video>
           <input type="text" id="barcodeInput" class="form-control mb-3" placeholder="Enter barcode number">
           <button type="button" class="btn btn-primary w-100" onclick="searchBarcode()">Search</button>
         <div id="barcodeResult" class="mt-3"></div>
@@ -131,38 +132,61 @@
         </div>
       </div>
 <script>
-let currentItemId = null;
+let codeReader;
+let streamStarted = false;
+
+// Wait until ZXing loads
+window.addEventListener("load", () => {
+  if (typeof ZXing === "undefined") {
+    console.error("ZXing failed to load — please check the script URL");
+    alert("ZXing failed to load. Please refresh or check internet connection.");
+    return;
+  }
+
+  console.log("ZXing loaded successfully!");
+  codeReader = new ZXing.BrowserMultiFormatReader();
+});
 
 function openModal(id) {
-  document.getElementById(id).style.display = "flex";
+  const modal = document.getElementById(id);
+  modal.style.display = "flex";
+
+  if (id === "barcodeModal" && !streamStarted && codeReader) {
+    console.log("Starting camera...");
+
+    codeReader.decodeFromVideoDevice(null, "reader", (result, err) => {
+      if (result) {
+        console.log("Barcode scanned:", result.text);
+        document.getElementById("barcodeInput").value = result.text;
+        searchBarcode(result.text);
+        codeReader.reset();
+        streamStarted = false;
+      }
+    });
+
+    streamStarted = true;
+  }
 }
 
 function closeModal(id) {
   const modal = document.getElementById(id);
-    modal.style.display = "none";
+  modal.style.display = "none";
 
-    // Clear input and result when modal closes
-    if (id === "barcodeModal") {
-      document.getElementById("barcodeInput").value = "";
-      document.getElementById("barcodeResult").innerHTML = "";
-    }
-    if (id === "outboundModal") {
-      document.getElementById("outboundQty").value = "";
-    }
-    if (id === "inboundModal") {
-      document.getElementById("inboundQty").value = "";
-    }
+  if (id === "barcodeModal" && streamStarted && codeReader) {
+    codeReader.reset();
+    streamStarted = false;
+  }
 }
 
-function searchBarcode() {
-  const barcode = document.getElementById('barcodeInput').value;
+function searchBarcode(barcodeInput) {
+  const barcode = barcodeInput || document.getElementById("barcodeInput").value.trim();
   if (!barcode) return;
 
   fetch(`/search-barcode?barcode=${barcode}`)
     .then(res => res.json())
     .then(data => {
-      const resultDiv = document.getElementById('barcodeResult');
-      resultDiv.innerHTML = '';
+      const resultDiv = document.getElementById("barcodeResult");
+      resultDiv.innerHTML = "";
 
       if (data.exists) {
         document.getElementById("inboundForm").action = "/inbound/" + data.item.id;
@@ -179,10 +203,11 @@ function searchBarcode() {
       } else {
         resultDiv.innerHTML = `
           <p>No item found. Please add item.</p>
-          <button onclick="window.location.href='/add-item'" class="btn btn-secondary w-100" style="width: 80px; height=28px;">Add Item</button>
+          <button onclick="window.location.href='/add-item?barcode=${barcode}'" class="btn btn-secondary w-100" style="width: 80px; height=28px;">Add Item</button>
         `;
       }
-    });
+    })
+    .catch(err => console.error("Error fetching barcode:", err));
 }
 
 function submitInbound() {
@@ -207,6 +232,47 @@ function submitOutbound() {
     if (res.redirected) window.location.href = res.url;
   });
   closeModal('outboundModal');
+}
+
+const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+
+if (isMobile) {
+  // Only scanning mode
+  window.addEventListener("load", () => {
+    if (typeof ZXing === "undefined") {
+      alert("ZXing failed to load. Please refresh.");
+      return;
+    }
+    const codeReader = new ZXing.BrowserMultiFormatReader();
+    codeReader.decodeFromVideoDevice(null, "reader", (result, err) => {
+      if (result) {
+        console.log("Scanned:", result.text);
+        fetch("/api/scan", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ barcode: result.text })
+        }).then(() => console.log("Sent to server"));
+        codeReader.reset();
+      }
+    });
+  });
+}
+
+if (!/Mobi|Android/i.test(navigator.userAgent)) {
+  let lastBarcode = null;
+  setInterval(() => {
+    fetch("/api/last-scan")
+      .then(res => res.json())
+      .then(data => {
+        if (data.barcode && data.barcode !== lastBarcode) {
+          lastBarcode = data.barcode;
+          console.log("New scan received:", data.barcode);
+          document.getElementById("barcodeInput").value = data.barcode;
+          searchBarcode(data.barcode);
+          openModal("barcodeModal");
+        }
+      });
+  }, 2000); // Check every 2s
 }
 </script>
 </body>

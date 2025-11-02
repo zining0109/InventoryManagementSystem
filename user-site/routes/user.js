@@ -782,6 +782,17 @@ router.post('/inbound/:id', (req, res) => {
     return res.status(401).send("Unauthorized: Please log in");
   }
 
+  // Validation, must be a positive number greater than 0
+  const parsedAmount = Number(amount);
+  if (isNaN(parsedAmount) || parsedAmount <= 0) {
+    return res.send(`
+      <script>
+        alert("Invalid amount. Please enter a positive number greater than 0.");
+        window.history.back();
+      </script>
+    `);
+  }
+
   const sql = "UPDATE items SET quantity = quantity + ? WHERE id = ?";
   db.query(sql, [amount, itemId], (err) => {
     if (err) {
@@ -824,6 +835,17 @@ router.post('/outbound/:id', (req, res) => {
     return res.status(401).send("Unauthorized: Please log in");
   }
 
+  // Validation, must be a positive number greater than 0
+  const parsedAmount = Number(amount);
+  if (isNaN(parsedAmount) || parsedAmount <= 0) {
+    return res.send(`
+      <script>
+        alert("Invalid amount. Please enter a positive number greater than 0.");
+        window.history.back();
+      </script>
+    `);
+  }
+
   const sql = `UPDATE items SET quantity = quantity - ? WHERE id = ? AND quantity >= ?`;
   db.query(sql, [amount, itemId, amount], (err, result) => {
     if (err) return res.status(500).send('Database error');
@@ -861,6 +883,28 @@ router.post('/outbound/:id', (req, res) => {
       });
     });
   });
+});
+
+let lastScannedBarcode = null;
+
+router.post("/api/scan", (req, res) => {
+  console.log("POST /api/scan received");
+  console.log("Headers:", req.headers);
+  console.log("Body:", req.body);
+
+  if (!req.body || !req.body.barcode) {
+    console.error("No barcode received in body");
+    return res.status(400).json({ success: false, message: "No barcode received" });
+  }
+
+  lastScannedBarcode = req.body.barcode;
+  console.log("Stored barcode:", lastScannedBarcode);
+  res.json({ success: true });
+});
+
+router.get("/api/last-scan", (req, res) => {
+  res.json({ barcode: lastScannedBarcode });
+  lastScannedBarcode = null;
 });
 
 router.get('/history', (req, res) => {
