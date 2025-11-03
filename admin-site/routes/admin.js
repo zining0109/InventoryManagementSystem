@@ -42,6 +42,10 @@ router.post('/login', async (req, res) => {
   });
 });
 
+router.get('/login', (req, res) => {
+  res.render('login'); 
+});
+
 router.get('/forgot-password', (req, res) => {
   res.render('forgot-password'); // Render forgot-password.ejs
 });
@@ -54,46 +58,59 @@ router.post('/forgot-password', (req, res) => {
   const token = crypto.randomBytes(32).toString('hex');
   const expireTime = new Date(Date.now() + 3600000); // 1 hour expiry
 
-  // Save token in DB
-  const sql = "UPDATE users SET reset_token = ?, reset_token_expire = ? WHERE email = ? AND role = 'manager'";
-  db.query(sql, [token, expireTime, email], (err, result) => {
+  // Check first if the email exists and belongs to a manager
+  const checkSql = "SELECT id FROM users WHERE email = ? AND role = 'manager'";
+  db.query(checkSql, [email], (err, result) => {
     if (err) {
       console.error(err);
       return res.send("Server error");
     }
 
-    if (result.affectedRows === 0) {
-      return res.send("No manager found with that email");
+    if (result.length === 0) {
+      // Email not found or not a manager
+      return res.send(`<script>
+        alert("No manager found with that email.");
+        window.location.href = "/forgot-password";
+      </script>`);
     }
 
-    // Send email
-    const transporter = nodemailer.createTransport({
-      service: "gmail", 
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-      }
-    });
-
-    const resetLink = `http://localhost:3001/reset-password/${token}`;
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: "Password Reset Request",
-      html: `<p>You requested a password reset.</p>
-             <p>Click <a href="${resetLink}">here</a> to reset your password.</p>`
-    };
-
-    transporter.sendMail(mailOptions, (err, info) => {
+    // Save token in DB
+    const sql = "UPDATE users SET reset_token = ?, reset_token_expire = ? WHERE email = ? AND role = 'manager'";
+    db.query(sql, [token, expireTime, email], (err, result) => {
       if (err) {
         console.error(err);
-        return res.send("Error sending email");
+        return res.send("Server error");
       }
-      // Redirect to login with success message
-      res.send(`<script>
-        alert("Reset link sent successfully. Please check your email.");
-        window.location.href = "/"; 
-        </script>`);
+
+      // Send email
+      const transporter = nodemailer.createTransport({
+        service: "gmail", 
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS
+        }
+      });
+
+      const resetLink = `http://localhost:3001/reset-password/${token}`;
+      const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: email,
+        subject: "Password Reset Request",
+        html: `<p>You requested a password reset.</p>
+               <p>Click <a href="${resetLink}">here</a> to reset your password.</p>`
+      };
+  
+      transporter.sendMail(mailOptions, (err, info) => {
+        if (err) {
+          console.error(err);
+          return res.send("Error sending email");
+        }
+        // Redirect to login with success message
+        res.send(`<script>
+          alert("Reset link sent successfully. Please check your email.");
+          window.location.href = "/"; 
+          </script>`);
+      });
     });
   });
 });
