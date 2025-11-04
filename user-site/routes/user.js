@@ -461,25 +461,39 @@ router.get('/item/delete/:id', (req, res) => {
       `);
     }
 
-    // Step 2: Proceed with deletion if quantity = 0
-    const deleteSql = 'DELETE FROM items WHERE id = ?';
-    db.query(deleteSql, [id], (err, result) => {
-      if (err) {
-        console.error(err);
+    // Step 2: Delete related notifications first
+    const deleteNotificationsSql = 'DELETE FROM notifications WHERE item_id = ?';
+    db.query(deleteNotificationsSql, [id], (err1) => {
+      if (err1) {
+        console.error(err1);
         return res.send(`
           <script>
-            alert("Failed to delete item.");
+            alert("Failed to delete related notifications.");
             window.location.href = "/item";
           </script>
         `);
       }
 
-      res.send(`
-        <script>
-          alert("Item deleted successfully.");
-          window.location.href = "/item";
-        </script>
-      `);
+      // Step 3: Proceed with item deletion
+      const deleteSql = 'DELETE FROM items WHERE id = ?';
+      db.query(deleteSql, [id], (err2, result) => {
+        if (err2) {
+          console.error(err2);
+          return res.send(`
+            <script>
+              alert("Failed to delete item.");
+              window.location.href = "/item";
+            </script>
+          `);
+        }
+
+        res.send(`
+          <script>
+            alert("Item deleted successfully.");
+            window.location.href = "/item";
+          </script>
+        `);
+      });
     });
   });
 });
@@ -699,19 +713,39 @@ router.post('/category/edit/:id', (req, res) => {
   const { name, description } = req.body;
   const categoryId = req.params.id;
 
-  const sql = 'UPDATE categories SET name = ?, description = ? WHERE id = ?';
-  db.query(sql, [name, description, categoryId], (err, result) => {
+  // Step 1: Check if name already exists (excluding this category)
+  const checkSql = 'SELECT id FROM categories WHERE name = ? AND id != ?';
+  db.query(checkSql, [name, categoryId], (err, results) => {
     if (err) {
       console.error(err);
       return res.status(500).send('Database error');
     }
 
-    res.send(`
-      <script>
-        alert("Category updated successfully.");
-        window.location.href = "/category";
-      </script>
-    `);
+    if (results.length > 0) {
+      // Category name already exists
+      return res.send(`
+        <script>
+          alert("Category name already exists. Please use another category name.");
+          window.location.href = "/category/edit/${categoryId}";
+        </script>
+      `);
+    }
+
+    // Step 2: Update if no duplicates
+    const updateSql = 'UPDATE categories SET name = ?, description = ? WHERE id = ?';
+    db.query(updateSql, [name, description, categoryId], (err2, result2) => {
+      if (err2) {
+        console.error(err2);
+        return res.status(500).send('Database error');
+      }
+
+      res.send(`
+        <script>
+          alert("Category updated successfully.");
+          window.location.href = "/category";
+        </script>
+      `);
+    });
   });
 });
 
