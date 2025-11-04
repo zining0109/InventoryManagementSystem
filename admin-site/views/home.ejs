@@ -75,7 +75,7 @@
       </h2>
     </div>
     <!-- Notification Modal -->
-    <div id="notificationModal" style="display:none; position:absolute; background:white; border:1px solid rgba(0, 0, 0, 0.3); border-radius: 5px; padding:8px 12px; width:250px; top:140px; right:30px; z-index: 1000;">
+    <div id="notificationModal">
       <ul id="notificationList"></ul>
     </div>
     <hr>
@@ -219,10 +219,22 @@ document.getElementById('bellIcon').addEventListener('click', async () => {
   }
 });
 
+document.addEventListener('click', (event) => {
+  const modal = document.getElementById('notificationModal');
+  const bell = document.getElementById('bellIcon');
+
+  // If modal is open and click is outside both modal & bell, close it
+  if (modal.style.display === 'block' && 
+      !modal.contains(event.target) && 
+      !bell.contains(event.target)) {
+    modal.style.display = 'none';
+  }
+});
+
 // Load on page start
 loadNotifications();
 
-// Auto-refresh notifications
+// Auto-refresh notifications to update UI
 setInterval(loadNotifications, 60000);
 </script>
 
@@ -247,6 +259,5 @@ setInterval(loadNotifications, 60000);
     `);
   });
 </script>
-
 </body>
 </html>

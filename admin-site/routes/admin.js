@@ -4,6 +4,7 @@ const router = express.Router();
 const db = require('../db');
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
+const checkStock = require('../utils/checkStock');
 
 // Login POST route
 router.post('/login', async (req, res) => {
@@ -970,56 +971,8 @@ router.get("/api/report/stock-level", (req, res) => {
 
 router.get('/check-stock', (req, res) => {
   const io = req.app.get('io');
-  const now = new Date();
-
-  db.query('SELECT id AS item_id, name, quantity FROM items', (err, results) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'Database error' });
-    }
-
-    results.forEach(item => {
-      let alertStatus = null;
-
-      if (item.quantity === 0) alertStatus = 'Out of Stock';
-      else if (item.quantity < 5) alertStatus = 'Low Stock';
-
-      if (!alertStatus) return; // No alert needed
-
-      const checkQuery = `
-        SELECT id FROM notifications
-        WHERE item_id = ? AND status = ? AND is_read = 0
-        LIMIT 1
-      `;
-      db.query(checkQuery, [item.item_id, alertStatus], (err2, existing) => {
-        if (err2) return console.error(err2);
-
-        if (existing.length === 0) {
-          const message = `${item.name} is ${alertStatus} (qty ${item.quantity})`;
-          const insertQuery = `
-            INSERT INTO notifications (item_id, status, message)
-            VALUES (?, ?, ?)
-          `;
-          db.query(insertQuery, [item.item_id, alertStatus, message], (err3, insertRes) => {
-            if (err3) return console.error(err3);
-
-            const notif = {
-              id: insertRes.insertId,
-              item_id: item.item_id,
-              status: alertStatus,
-              message,
-              created_at: now.toISOString(),
-              is_read: 0
-            };
-            io.emit('notification', notif);
-            console.log('Emitted new notification:', notif);
-          });
-        }
-      });
-    });
-
-    res.json({ success: true });
-  });
+  checkStock(io);
+  res.json({ success: true });
 });
 
 router.get('/notifications', (req, res) => {
@@ -1028,6 +981,7 @@ router.get('/notifications', (req, res) => {
            n.created_at, n.is_read
     FROM notifications n
     JOIN items i ON n.item_id = i.id
+    WHERE n.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
     ORDER BY n.created_at DESC
   `;
   db.query(query, (err, results) => {

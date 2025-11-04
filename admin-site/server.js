@@ -13,13 +13,20 @@ const server = http.createServer(app); // Use this instead of app.listen
 const io = new Server(server); // Create socket.io server
 app.set('io', io); // Make io accessible in routes if needed
 
-// Run stock check every 1 minute automatically
+const checkStock = require('./utils/checkStock');
+
+// Run stock check automatically every 60 seconds
 setInterval(() => {
-  fetch('http://localhost:3000/check-stock')
-    .then(res => res.json())
-    .then(data => console.log('Auto stock check:', data))
-    .catch(err => console.error('Auto check error:', err));
-}, 60000); // 60,000 ms = 1 minute
+  console.log('Running automatic stock check...');
+  checkStock(io);
+}, 60000);
+
+setInterval(() => {
+  db.query('DELETE FROM notifications WHERE created_at < NOW() - INTERVAL 7 DAY', (err) => {
+    if (err) console.error('Cleanup error:', err);
+    else console.log('Old notifications cleaned up');
+  });
+}, 24 * 60 * 60 * 1000);
 
 app.use(express.json());
 
