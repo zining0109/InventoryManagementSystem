@@ -78,7 +78,7 @@
           <a href="#" data-report="stock-level">Stock Level</a>
           <a href="#" data-report="stock-movement">Stock Movement</a>
           <a href="#" data-report="inventory-flow">Inventory Flow</a>
-          <a href="#" data-report="sales-report">Sals Report</a>
+          <a href="#" data-report="sales-report">Sales Report</a>
         </div>
         </div>
       </h2>
@@ -101,17 +101,10 @@
           </form>
         </div>
       </div>
-      <div class="date-menu" id="dateInput">
-        <form id="dateFilterForm" style="display: flex; flex-direction: column; gap: 8px; background-color: white;">
-          <label>Select Date: </label>
-          <input type="date" name="specific_date" id="specific_date" onchange="loadInventoryFlow()">
-          <button type="submit" class="btn btn-outline-primary">Apply</button>
-        </form>
-      </div>
-    <div class="month" id="monthInput">
+      <div class="month" id="monthInput">
         <label for="monthSelect"><strong>Select Month:</strong></label>
         <select id="monthSelect"></select>
-    </div>
+      </div>
       <div class="report-layout">
       <!-- Row 1: Summary card -->
       <div id="salesSummary" class="card">
@@ -168,10 +161,10 @@
     filterDropdown.classList.remove("show");
   });
 
-document.addEventListener("DOMContentLoaded", () => {
-  // Always set default report here
-  let defaultReport = "stock-on-hand";
-  showReport(defaultReport);
+  document.addEventListener("DOMContentLoaded", () => {
+    // Always set default report here
+    let defaultReport = "stock-on-hand";
+    showReport(defaultReport);
 
   // Handle clicks on menu items
   document.querySelectorAll(".custom-dropdown-menu a").forEach(link => {
@@ -190,15 +183,19 @@ function showReport(reportType) {
   const dateFilter = document.getElementById("date-filter");
   if (!dateFilter) return;
 
-  if (reportType === "stock-movement") {
+  // Reports that need date filter
+  if (reportType === "stock-movement" || reportType === "stock-level" || reportType === "inventory-flow") {
     const { start, end } = setDefaultDates();
-    loadStockMovement(start, end);
+
+    if (reportType === "stock-movement") loadStockMovement(start, end);
+    else if (reportType === "stock-level") loadStockLevel(start, end);
+    else if (reportType === "inventory-flow") loadInventoryFlow(start, end);
+
     dateFilter.style.display = "block";
-  } else {
+  } 
+  else {
     dateFilter.style.display = "none";
     if (reportType === "stock-on-hand") loadStockOnHand();
-    else if (reportType === "stock-level") loadStockLevel();
-    else if (reportType === "inventory-flow") loadInventoryFlow();
     else if (reportType === "sales-report") {
       const select = document.getElementById("monthSelect");
       if (select.options.length === 0) {
@@ -228,7 +225,6 @@ function loadStockOnHand() {
   document.getElementById("categoryRevenuePieChart").style.display = "none";
   document.getElementById("monthInput").style.display = "none";
   document.getElementById("reportChart").style.display = "block";
-  document.getElementById("dateInput").style.display = "none";
   fetch("/api/report/stock-on-hand")
     .then(res => res.json())
     .then(data => {
@@ -238,7 +234,7 @@ function loadStockOnHand() {
       const ctx = document.getElementById("reportChart").getContext("2d");
 
       if (window.reportChartInstance) {
-        window.reportChartInstance.destroy(); // reset chart if exists
+        window.reportChartInstance.destroy(); // Reset chart if exists
       }
 
       window.reportChartInstance = new Chart(ctx, {
@@ -260,7 +256,7 @@ function loadStockOnHand() {
           },
           scales: {
             x: {
-              ticks: { autoSkip: false }, // show all item names
+              ticks: { autoSkip: false }, // Show all item names
               title: { display: true, text: "Items" }
             },
             y: {
@@ -307,213 +303,48 @@ function setDefaultDates() {
   return { start: startStr, end: end };
 }
 
-document.getElementById("dateFilterForm").addEventListener("submit", (e) => {
-  e.preventDefault();
-  const start = document.getElementById("start_date").value;
-  const end = document.getElementById("end_date").value;
+// ---- DATE MENU TOGGLE ----
+document.addEventListener("DOMContentLoaded", () => {
+  const calendarIcon = document.querySelector("#date-filter .calendar-icon");
+  const dateMenu = document.querySelector("#date-filter .date-menu");
 
-  // detect current report
-  const currentReport = document.getElementById("report-title").innerText;
+  if (!calendarIcon || !dateMenu) return;
 
-  if (currentReport.includes("Stock Movement")) {
-    loadStockMovement(start, end);
-  } else if (currentReport.includes("Stock Level")) {
-    loadStockLevel(start, end);
-  }
+  // Initially hidden
+  dateMenu.style.display = "none";
 
-  dateMenu.style.display = "none"; // close after apply
+  calendarIcon.addEventListener("click", (e) => {
+    e.stopPropagation(); // Prevent closing immediately
+    dateMenu.style.display = (dateMenu.style.display === "block") ? "none" : "block";
+  });
+
+  // Close menu if user clicks outside
+  document.addEventListener("click", (e) => {
+    if (!dateMenu.contains(e.target) && !calendarIcon.contains(e.target)) {
+      dateMenu.style.display = "none";
+    }
+  });
 });
 
-function loadStockMovement(start_date, end_date) {
-  document.getElementById("salesSummary").style.display = "none";
-  document.getElementById("itemRevenuePieChart").style.display = "none";
-  document.getElementById("categoryRevenuePieChart").style.display = "none";
-  document.getElementById("monthInput").style.display = "none";
-  document.getElementById("reportChart").style.display = "block";
-  document.getElementById("date-filter").style.display = "block";
-  document.getElementById("dateInput").style.display = "none";
+// ---- DATE FILTER HANDLER ----
+document.getElementById("dateFilterForm").addEventListener("submit", (e) => {
+  e.preventDefault();
 
-  // if no dates passed → default last 7 days
-  if (!end_date) {
-    const today = new Date();
-    end_date = today.toISOString().split("T")[0];
-  }
-  if (!start_date) {
-    const start = new Date(end_date);
-    start.setDate(start.getDate() - 6);
-    start_date = start.toISOString().split("T")[0];
+  const start = document.getElementById("start_date").value;
+  const end = document.getElementById("end_date").value;
+  const currentReport = document.getElementById("report-title").innerText;
+  const dateMenu = document.querySelector("#date-filter .date-menu");
+
+  if (currentReport.includes("Stock Level")) {
+    loadStockLevel(start, end);
+  } else if (currentReport.includes("Stock Movement")) {
+    loadStockMovement(start, end);
+  } else if (currentReport.includes("Inventory Flow")) {     
+    loadInventoryFlow(start, end);
   }
 
-  fetch(`/api/report/stock-movement?start_date=${start_date}&end_date=${end_date}`)
-    .then(res => res.json())
-    .then(data => {
-      // group by item → each line is an item
-      const grouped = {};
-      data.forEach(row => {
-        if (!grouped[row.name]) grouped[row.name] = [];
-        grouped[row.name].push({ x: row.date, y: row.movement });
-      });
-
-      const datasets = Object.keys(grouped).map((item, idx) => ({
-        label: item,
-        data: grouped[item],
-        borderColor: `hsl(${idx * 50}, 70%, 50%)`,
-        fill: false,
-        tension: 0.2
-      }));
-
-      const ctx = document.getElementById("reportChart").getContext("2d");
-      if (window.reportChartInstance) {
-        window.reportChartInstance.destroy();
-      }
-
-      window.reportChartInstance = new Chart(ctx, {
-        type: "line",
-        data: { datasets },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: { position: "top" }
-          },
-          scales: {
-            x: {
-              type: "time",
-              time: {
-                unit: "day",
-                tooltipFormat: "yyyy-MM-dd"
-              },
-              title: { display: true, text: "Date" }
-            },
-            y: {
-              beginAtZero: true,
-              title: { display: true, text: "Movement Quantity" }
-            }
-          }
-        }
-      });
-    })
-    .catch(err => console.error("Failed to load stock movement report:", err));
-}
-
-const monthNames = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December"
-];
-
-function populateMonthDropdown() {
-  const select = document.getElementById("monthSelect");
-  select.innerHTML = "";
-  const today = new Date();
-  const currentYear = today.getFullYear();
-  const currentMonth = today.getMonth(); // 0-based
-
-  // Example: show last 12 months
-  for (let i = 0; i < 12; i++) {
-    const date = new Date(currentYear, currentMonth - i, 1);
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    const value = `${year}-${String(month + 1).padStart(2, "0")}`;
-    const option = document.createElement("option");
-    option.value = value;
-    option.textContent = `${monthNames[month]} ${year}`;
-    if (i === 0) option.selected = true;
-    select.appendChild(option);
-  }
-}
-
-function loadSalesReport(monthYear) {
-  document.getElementById("reportChart").style.display = "none";
-  document.getElementById("salesSummary").style.display = "block";
-  document.getElementById("itemRevenuePieChart").style.display = "block";
-  document.getElementById("categoryRevenuePieChart").style.display = "block";
-  document.getElementById("monthInput").style.display = "block";
-  document.getElementById("dateInput").style.display = "none";
-
-  // default to current month
-  if (!monthYear) {
-    const today = new Date();
-    monthYear = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
-  }
-
-  const [year, month] = monthYear.split("-"); // split correctly
-
-  // set dropdown
-  const select = document.getElementById("monthSelect");
-  select.value = monthYear;
-  select.onchange = (e) => loadSalesReport(e.target.value);
-
-  // fetch from backend
-  fetch(`/api/report/sales-report?month=${month}&year=${year}`)
-    .then(res => res.json())
-    .then(data => {
-      document.getElementById("totalSalesQty").innerText = data.totalSalesQty;
-      document.getElementById("totalRevenue").innerText =
-        "RM " + Number(data.totalRevenue).toFixed(2);
-      loadItemRevenueChart(data.itemRevenues);
-      loadCategoryRevenueChart(data.categoryRevenues);
-    })
-    .catch(err => console.error("Failed to load sales report:", err));
-}
-
-function loadItemRevenueChart(itemRevenues) {
-  const labels = itemRevenues.map(item => item.name);
-  const values = itemRevenues.map(item => item.revenue);
-
-  const ctx = document.getElementById("itemRevenueChart").getContext("2d");
-  if (window.itemRevenueChartInstance) {
-    window.itemRevenueChartInstance.destroy();
-  }
-  window.itemRevenueChartInstance = new Chart(ctx, {
-    type: "pie",
-    data: {
-      labels: labels,
-      datasets: [{
-        data: values,
-        backgroundColor: labels.map((_, i) => `hsl(${i * 50}, 70%, 60%)`)
-      }]
-    },
-    options: {
-      plugins: {
-        legend: { position: "right" },
-        tooltip: {
-          callbacks: {
-            label: (ctx) => `${ctx.label}: RM ${ctx.raw.toFixed(2)}`
-          }
-        }
-      }
-    }
-  });
-}
-
-function loadCategoryRevenueChart(categoryRevenues) {
-  const labels = categoryRevenues.map(cat => cat.name);
-  const values = categoryRevenues.map(cat => cat.revenue);
-
-  const ctx = document.getElementById("categoryRevenueChart").getContext("2d");
-  if (window.categoryRevenueChartInstance) {
-    window.categoryRevenueChartInstance.destroy();
-  }
-  window.categoryRevenueChartInstance = new Chart(ctx, {
-    type: "pie",
-    data: {
-      labels: labels,
-      datasets: [{
-        data: values,
-        backgroundColor: labels.map((_, i) => `hsl(${i * 80}, 70%, 60%)`)
-      }]
-    },
-    options: {
-      plugins: {
-        legend: { position: "right" },
-        tooltip: {
-          callbacks: {
-            label: (ctx) => `${ctx.label}: RM ${ctx.raw.toFixed(2)}`
-          }
-        }
-      }
-    }
-  });
-}
+  if (dateMenu) dateMenu.style.display = "none"; // Safe close
+});
 
 function loadStockLevel(start_date, end_date) {
   document.getElementById("reportChart").style.display = "block";
@@ -521,8 +352,6 @@ function loadStockLevel(start_date, end_date) {
   document.getElementById("itemRevenuePieChart").style.display = "none";
   document.getElementById("categoryRevenuePieChart").style.display = "none";
   document.getElementById("monthInput").style.display = "none";
-  document.getElementById("date-filter").style.display = "block";
-  document.getElementById("dateInput").style.display = "none";
 
   if (!end_date) {
     end_date = new Date().toISOString().split("T")[0];
@@ -615,20 +444,253 @@ function loadStockLevel(start_date, end_date) {
     });
 }
 
-function loadInventoryFlow() {
+function loadStockMovement(start_date, end_date) {
+  document.getElementById("salesSummary").style.display = "none";
+  document.getElementById("itemRevenuePieChart").style.display = "none";
+  document.getElementById("categoryRevenuePieChart").style.display = "none";
+  document.getElementById("monthInput").style.display = "none";
+  document.getElementById("reportChart").style.display = "block";
+
+  // if no dates passed → default last 7 days
+  if (!end_date) {
+    const today = new Date();
+    end_date = today.toISOString().split("T")[0];
+  }
+  if (!start_date) {
+    const start = new Date(end_date);
+    start.setDate(start.getDate() - 6);
+    start_date = start.toISOString().split("T")[0];
+  }
+
+  fetch(`/api/report/stock-movement?start_date=${start_date}&end_date=${end_date}`)
+    .then(res => res.json())
+    .then(data => {
+      // group by item → each line is an item
+      const grouped = {};
+      data.forEach(row => {
+        if (!grouped[row.name]) grouped[row.name] = [];
+        grouped[row.name].push({ x: row.date, y: row.movement });
+      });
+
+      const datasets = Object.keys(grouped).map((item, idx) => ({
+        label: item,
+        data: grouped[item],
+        borderColor: `hsl(${idx * 50}, 70%, 50%)`,
+        fill: false,
+        tension: 0.2
+      }));
+
+      const ctx = document.getElementById("reportChart").getContext("2d");
+      if (window.reportChartInstance) {
+        window.reportChartInstance.destroy();
+      }
+
+      window.reportChartInstance = new Chart(ctx, {
+        type: "line",
+        data: { datasets },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { position: "top" }
+          },
+          scales: {
+            x: {
+              type: "time",
+              time: {
+                unit: "day",
+                tooltipFormat: "yyyy-MM-dd"
+              },
+              title: { display: true, text: "Date" }
+            },
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: "Movement Quantity" }
+            }
+          }
+        }
+      });
+    })
+    .catch(err => console.error("Failed to load stock movement report:", err));
+}
+
+function loadInventoryFlow(start_date, end_date) {
   document.getElementById("reportChart").style.display = "block";
   document.getElementById("salesSummary").style.display = "none";
   document.getElementById("itemRevenuePieChart").style.display = "none";
   document.getElementById("categoryRevenuePieChart").style.display = "none";
   document.getElementById("monthInput").style.display = "none";
-  document.getElementById("date-filter").style.display = "block";
-  document.getElementById("dateInput").style.display = "block";
 
+  if (!end_date) end_date = new Date().toISOString().split("T")[0];
+  if (!start_date) {
+    const s = new Date(end_date);
+    s.setDate(s.getDate() - 6);
+    start_date = s.toISOString().split("T")[0];
+  }
 
+  fetch(`/api/report/inventory-flow?start_date=${start_date}&end_date=${end_date}`)
+    .then(res => res.json())
+    .then(data => {
+      const labels = data.map(r => r.date);
+      const inbound = data.map(r => r.inbound);
+      const outbound = data.map(r => r.outbound);
 
+      const ctx = document.getElementById("reportChart").getContext("2d");
+      if (window.reportChartInstance) window.reportChartInstance.destroy();
 
+      window.reportChartInstance = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [
+            {
+              label: "Inbound",
+              data: inbound,
+              backgroundColor: "rgba(75, 192, 192, 0.7)"
+            },
+            {
+              label: "Outbound",
+              data: outbound,
+              backgroundColor: "rgba(255, 99, 132, 0.7)"
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { position: "top" },
+            title: { display: true, text: "Inventory Flow (Inbound vs Outbound)" }
+          },
+          scales: {
+            x: { title: { display: true, text: "Date" } },
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: "Quantity" }
+            }
+          }
+        }
+      });
+    })
+    .catch(err => console.error("Failed to load inventory flow:", err));
 }
 
+const monthNames = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
+
+function populateMonthDropdown() {
+  const select = document.getElementById("monthSelect");
+  select.innerHTML = "";
+  const today = new Date();
+  const currentYear = today.getFullYear();
+  const currentMonth = today.getMonth(); // 0-based
+
+  // Example: show last 12 months
+  for (let i = 0; i < 12; i++) {
+    const date = new Date(currentYear, currentMonth - i, 1);
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const value = `${year}-${String(month + 1).padStart(2, "0")}`;
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = `${monthNames[month]} ${year}`;
+    if (i === 0) option.selected = true;
+    select.appendChild(option);
+  }
+}
+
+function loadSalesReport(monthYear) {
+  document.getElementById("reportChart").style.display = "none";
+  document.getElementById("salesSummary").style.display = "block";
+  document.getElementById("itemRevenuePieChart").style.display = "block";
+  document.getElementById("categoryRevenuePieChart").style.display = "block";
+  document.getElementById("monthInput").style.display = "block";
+
+  // default to current month
+  if (!monthYear) {
+    const today = new Date();
+    monthYear = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+  }
+
+  const [year, month] = monthYear.split("-"); // split correctly
+
+  // set dropdown
+  const select = document.getElementById("monthSelect");
+  select.value = monthYear;
+  select.onchange = (e) => loadSalesReport(e.target.value);
+
+  // fetch from backend
+  fetch(`/api/report/sales-report?month=${month}&year=${year}`)
+    .then(res => res.json())
+    .then(data => {
+      document.getElementById("totalSalesQty").innerText = data.totalSalesQty;
+      document.getElementById("totalRevenue").innerText =
+        "RM " + Number(data.totalRevenue).toFixed(2);
+      loadItemRevenueChart(data.itemRevenues);
+      loadCategoryRevenueChart(data.categoryRevenues);
+    })
+    .catch(err => console.error("Failed to load sales report:", err));
+}
+
+function loadItemRevenueChart(itemRevenues) {
+  const labels = itemRevenues.map(item => item.name);
+  const values = itemRevenues.map(item => item.revenue);
+
+  const ctx = document.getElementById("itemRevenueChart").getContext("2d");
+  if (window.itemRevenueChartInstance) {
+    window.itemRevenueChartInstance.destroy();
+  }
+  window.itemRevenueChartInstance = new Chart(ctx, {
+    type: "pie",
+    data: {
+      labels: labels,
+      datasets: [{
+        data: values,
+        backgroundColor: labels.map((_, i) => `hsl(${i * 50}, 70%, 60%)`)
+      }]
+    },
+    options: {
+      plugins: {
+        legend: { position: "right" },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => `${ctx.label}: RM ${ctx.raw.toFixed(2)}`
+          }
+        }
+      }
+    }
+  });
+}
+
+function loadCategoryRevenueChart(categoryRevenues) {
+  const labels = categoryRevenues.map(cat => cat.name);
+  const values = categoryRevenues.map(cat => cat.revenue);
+
+  const ctx = document.getElementById("categoryRevenueChart").getContext("2d");
+  if (window.categoryRevenueChartInstance) {
+    window.categoryRevenueChartInstance.destroy();
+  }
+  window.categoryRevenueChartInstance = new Chart(ctx, {
+    type: "pie",
+    data: {
+      labels: labels,
+      datasets: [{
+        data: values,
+        backgroundColor: labels.map((_, i) => `hsl(${i * 80}, 70%, 60%)`)
+      }]
+    },
+    options: {
+      plugins: {
+        legend: { position: "right" },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => `${ctx.label}: RM ${ctx.raw.toFixed(2)}`
+          }
+        }
+      }
+    }
+  });
+}
 </script>
 </body>
 </html>

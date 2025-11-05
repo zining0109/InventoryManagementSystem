@@ -773,122 +773,6 @@ router.get("/api/report/stock-on-hand", (req, res) => {
   });
 });
 
-router.get("/api/report/stock-movement", (req, res) => {
-  const { start_date, end_date } = req.query;
-
-  // default last 7 days
-  const today = new Date();
-  const defaultEnd = today.toISOString().split("T")[0];
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(today.getDate() - 6);
-  const defaultStart = sevenDaysAgo.toISOString().split("T")[0];
-
-  const start = start_date || defaultStart;
-  const end = end_date || defaultEnd;
-
-  const sql = `
-    WITH RECURSIVE dates AS (
-      SELECT ? AS date
-      UNION ALL
-      SELECT DATE_ADD(date, INTERVAL 1 DAY)
-      FROM dates
-      WHERE date < ?
-    )
-    SELECT 
-      d.date, 
-      i.id AS item_id, 
-      i.name, 
-      IFNULL(SUM(
-        CASE 
-          WHEN h.action = 'inbound' THEN h.amount
-          WHEN h.action IN ('outbound','sales') THEN -h.amount
-          ELSE 0
-        END
-      ), 0) AS movement
-    FROM dates d
-    CROSS JOIN items i
-    LEFT JOIN history h 
-      ON h.item_id = i.id 
-     AND DATE(h.created_at) = d.date
-    WHERE d.date BETWEEN ? AND ?
-    GROUP BY i.id, d.date
-    ORDER BY d.date ASC;
-  `;
-
-  db.query(sql, [start, end, start, end], (err, result) => {
-    if (err) {
-      console.error("SQL error:", err);
-      return res.status(500).json({ error: err.message });
-    }
-    res.json(result);
-  });
-});
-
-router.get("/api/report/sales-report", (req, res) => {
-  const { month, year } = req.query;
-
-  if (!month || !year) {
-    return res.status(400).json({ error: "Please provide ?month=MM&year=YYYY" });
-  }
-
-  const report = {};
-
-  // 1. Total sales qty
-  const sqlTotalQty = `
-    SELECT COALESCE(SUM(h.amount), 0) AS total_sales_qty
-    FROM history h
-    WHERE h.action IN ('sales', 'outbound')
-      AND MONTH(h.created_at) = ? AND YEAR(h.created_at) = ?;
-  `;
-
-  db.query(sqlTotalQty, [month, year], (err, qtyRows) => {
-    if (err) return res.status(500).json({ error: "Failed total qty" });
-    report.totalSalesQty = qtyRows[0].total_sales_qty;
-
-    // 2. Total revenue
-    const sqlTotalRevenue = `
-      SELECT COALESCE(SUM(s.total), 0) AS total_revenue
-      FROM sales s
-      WHERE MONTH(s.created_at) = ? AND YEAR(s.created_at) = ?;
-    `;
-    db.query(sqlTotalRevenue, [month, year], (err, revRows) => {
-      if (err) return res.status(500).json({ error: "Failed total revenue" });
-      report.totalRevenue = revRows[0].total_revenue;
-
-      // 3. Item revenues
-      const sqlItemRevenue = `
-        SELECT i.name, COALESCE(SUM(h.amount * i.price), 0) AS revenue
-        FROM history h
-        JOIN items i ON h.item_id = i.id
-        WHERE h.action IN ('sales','outbound')
-          AND MONTH(h.created_at) = ? AND YEAR(h.created_at) = ?
-        GROUP BY i.name ORDER BY revenue DESC;
-      `;
-      db.query(sqlItemRevenue, [month, year], (err, itemRows) => {
-        if (err) return res.status(500).json({ error: "Failed item revenue" });
-        report.itemRevenues = itemRows;
-
-        // 4. Category revenues
-        const sqlCategoryRevenue = `
-          SELECT c.name, COALESCE(SUM(h.amount * i.price), 0) AS revenue
-          FROM history h
-          JOIN items i ON h.item_id = i.id
-          JOIN categories c ON i.category_id = c.id
-          WHERE h.action IN ('sales','outbound')
-            AND MONTH(h.created_at) = ? AND YEAR(h.created_at) = ?
-          GROUP BY c.name ORDER BY revenue DESC;
-        `;
-        db.query(sqlCategoryRevenue, [month, year], (err, catRows) => {
-          if (err) return res.status(500).json({ error: "Failed category revenue" });
-          report.categoryRevenues = catRows;
-
-          res.json(report); // final response
-        });
-      });
-    });
-  });
-});
-
 router.get("/api/report/stock-level", (req, res) => {
   let start_date = req.query.start_date;
   let end_date = req.query.end_date;
@@ -969,6 +853,164 @@ router.get("/api/report/stock-level", (req, res) => {
   });
 });
 
+router.get("/api/report/stock-movement", (req, res) => {
+  const { start_date, end_date } = req.query;
+
+  // default last 7 days
+  const today = new Date();
+  const defaultEnd = today.toISOString().split("T")[0];
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(today.getDate() - 6);
+  const defaultStart = sevenDaysAgo.toISOString().split("T")[0];
+
+  const start = start_date || defaultStart;
+  const end = end_date || defaultEnd;
+
+  const sql = `
+    WITH RECURSIVE dates AS (
+      SELECT ? AS date
+      UNION ALL
+      SELECT DATE_ADD(date, INTERVAL 1 DAY)
+      FROM dates
+      WHERE date < ?
+    )
+    SELECT 
+      d.date, 
+      i.id AS item_id, 
+      i.name, 
+      IFNULL(SUM(
+        CASE 
+          WHEN h.action = 'inbound' THEN h.amount
+          WHEN h.action IN ('outbound','sales') THEN -h.amount
+          ELSE 0
+        END
+      ), 0) AS movement
+    FROM dates d
+    CROSS JOIN items i
+    LEFT JOIN history h 
+      ON h.item_id = i.id 
+     AND DATE(h.created_at) = d.date
+    WHERE d.date BETWEEN ? AND ?
+    GROUP BY i.id, d.date
+    ORDER BY d.date ASC;
+  `;
+
+  db.query(sql, [start, end, start, end], (err, result) => {
+    if (err) {
+      console.error("SQL error:", err);
+      return res.status(500).json({ error: err.message });
+    }
+    res.json(result);
+  });
+});
+
+router.get("/api/report/inventory-flow", (req, res) => {
+  const { start_date, end_date } = req.query;
+
+  // Default last 7 days
+  const today = new Date();
+  const defaultEnd = today.toISOString().split("T")[0];
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(today.getDate() - 6);
+  const defaultStart = sevenDaysAgo.toISOString().split("T")[0];
+
+  const start = start_date || defaultStart;
+  const end = end_date || defaultEnd;
+
+  const sql = `
+    WITH RECURSIVE dates AS (
+      SELECT ? AS date
+      UNION ALL
+      SELECT DATE_ADD(date, INTERVAL 1 DAY)
+      FROM dates
+      WHERE date < ?
+    )
+    SELECT 
+      d.date,
+      IFNULL(SUM(CASE WHEN h.action = 'inbound' THEN h.amount ELSE 0 END), 0) AS inbound,
+      IFNULL(SUM(CASE WHEN h.action IN ('outbound','sales') THEN h.amount ELSE 0 END), 0) AS outbound
+    FROM dates d
+    LEFT JOIN history h 
+      ON DATE(h.created_at) = d.date
+    WHERE d.date BETWEEN ? AND ?
+    GROUP BY d.date
+    ORDER BY d.date ASC;
+  `;
+
+  db.query(sql, [start, end, start, end], (err, result) => {
+    if (err) {
+      console.error("inventory-flow SQL error:", err);
+      return res.status(500).json({ error: err.message });
+    }
+    res.json(result);
+  });
+});
+
+router.get("/api/report/sales-report", (req, res) => {
+  const { month, year } = req.query;
+
+  if (!month || !year) {
+    return res.status(400).json({ error: "Please provide ?month=MM&year=YYYY" });
+  }
+
+  const report = {};
+
+  // 1. Total sales qty
+  const sqlTotalQty = `
+    SELECT COALESCE(SUM(h.amount), 0) AS total_sales_qty
+    FROM history h
+    WHERE h.action IN ('sales', 'outbound')
+      AND MONTH(h.created_at) = ? AND YEAR(h.created_at) = ?;
+  `;
+
+  db.query(sqlTotalQty, [month, year], (err, qtyRows) => {
+    if (err) return res.status(500).json({ error: "Failed total qty" });
+    report.totalSalesQty = qtyRows[0].total_sales_qty;
+
+    // 2. Total revenue
+    const sqlTotalRevenue = `
+      SELECT COALESCE(SUM(s.total), 0) AS total_revenue
+      FROM sales s
+      WHERE MONTH(s.created_at) = ? AND YEAR(s.created_at) = ?;
+    `;
+    db.query(sqlTotalRevenue, [month, year], (err, revRows) => {
+      if (err) return res.status(500).json({ error: "Failed total revenue" });
+      report.totalRevenue = revRows[0].total_revenue;
+
+      // 3. Item revenues
+      const sqlItemRevenue = `
+        SELECT i.name, COALESCE(SUM(h.amount * i.price), 0) AS revenue
+        FROM history h
+        JOIN items i ON h.item_id = i.id
+        WHERE h.action IN ('sales','outbound')
+          AND MONTH(h.created_at) = ? AND YEAR(h.created_at) = ?
+        GROUP BY i.name ORDER BY revenue DESC;
+      `;
+      db.query(sqlItemRevenue, [month, year], (err, itemRows) => {
+        if (err) return res.status(500).json({ error: "Failed item revenue" });
+        report.itemRevenues = itemRows;
+
+        // 4. Category revenues
+        const sqlCategoryRevenue = `
+          SELECT c.name, COALESCE(SUM(h.amount * i.price), 0) AS revenue
+          FROM history h
+          JOIN items i ON h.item_id = i.id
+          JOIN categories c ON i.category_id = c.id
+          WHERE h.action IN ('sales','outbound')
+            AND MONTH(h.created_at) = ? AND YEAR(h.created_at) = ?
+          GROUP BY c.name ORDER BY revenue DESC;
+        `;
+        db.query(sqlCategoryRevenue, [month, year], (err, catRows) => {
+          if (err) return res.status(500).json({ error: "Failed category revenue" });
+          report.categoryRevenues = catRows;
+
+          res.json(report); // final response
+        });
+      });
+    });
+  });
+});
+
 router.get('/check-stock', (req, res) => {
   const io = req.app.get('io');
   checkStock(io);
@@ -994,7 +1036,7 @@ router.get('/notifications', (req, res) => {
 });
 
 router.post('/notifications/mark-read', (req, res) => {
-  const ids = req.body?.ids; // Optional chaining prevents error
+  const ids = req.body?.ids; // Prevents error
 
   if (Array.isArray(ids) && ids.length > 0) {
     const placeholders = ids.map(() => '?').join(',');
