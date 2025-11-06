@@ -905,9 +905,8 @@ router.get("/api/report/stock-movement", (req, res) => {
 });
 
 router.get("/api/report/inventory-flow", (req, res) => {
-  const { start_date, end_date } = req.query;
+  const { start_date, end_date, item_id } = req.query;
 
-  // Default last 7 days
   const today = new Date();
   const defaultEnd = today.toISOString().split("T")[0];
   const sevenDaysAgo = new Date();
@@ -917,32 +916,65 @@ router.get("/api/report/inventory-flow", (req, res) => {
   const start = start_date || defaultStart;
   const end = end_date || defaultEnd;
 
-  const sql = `
-    WITH RECURSIVE dates AS (
-      SELECT ? AS date
-      UNION ALL
-      SELECT DATE_ADD(date, INTERVAL 1 DAY)
-      FROM dates
-      WHERE date < ?
-    )
-    SELECT 
-      d.date,
-      IFNULL(SUM(CASE WHEN h.action = 'inbound' THEN h.amount ELSE 0 END), 0) AS inbound,
-      IFNULL(SUM(CASE WHEN h.action IN ('outbound','sales') THEN h.amount ELSE 0 END), 0) AS outbound
-    FROM dates d
-    LEFT JOIN history h 
-      ON DATE(h.created_at) = d.date
-    WHERE d.date BETWEEN ? AND ?
-    GROUP BY d.date
-    ORDER BY d.date ASC;
-  `;
+  let sql, params;
 
-  db.query(sql, [start, end, start, end], (err, result) => {
+  if (item_id && item_id !== "") {
+    // Specific item
+    sql = `
+      WITH RECURSIVE dates AS (
+        SELECT ? AS date
+        UNION ALL
+        SELECT DATE_ADD(date, INTERVAL 1 DAY)
+        FROM dates
+        WHERE date < ?
+      )
+      SELECT 
+        d.date,
+        IFNULL(SUM(CASE WHEN h.action = 'inbound' THEN h.amount ELSE 0 END), 0) AS inbound,
+        IFNULL(SUM(CASE WHEN h.action IN ('outbound','sales') THEN h.amount ELSE 0 END), 0) AS outbound
+      FROM dates d
+      LEFT JOIN history h ON DATE(h.created_at) = d.date AND h.item_id = ?
+      WHERE d.date BETWEEN ? AND ?
+      GROUP BY d.date
+      ORDER BY d.date ASC;
+    `;
+    params = [start, end, item_id, start, end];
+  } else {
+    // All items
+    sql = `
+      WITH RECURSIVE dates AS (
+        SELECT ? AS date
+        UNION ALL
+        SELECT DATE_ADD(date, INTERVAL 1 DAY)
+        FROM dates
+        WHERE date < ?
+      )
+      SELECT 
+        d.date,
+        IFNULL(SUM(CASE WHEN h.action = 'inbound' THEN h.amount ELSE 0 END), 0) AS inbound,
+        IFNULL(SUM(CASE WHEN h.action IN ('outbound','sales') THEN h.amount ELSE 0 END), 0) AS outbound
+      FROM dates d
+      LEFT JOIN history h ON DATE(h.created_at) = d.date
+      WHERE d.date BETWEEN ? AND ?
+      GROUP BY d.date
+      ORDER BY d.date ASC;
+    `;
+    params = [start, end, start, end];
+  }
+
+  db.query(sql, params, (err, result) => {
     if (err) {
       console.error("inventory-flow SQL error:", err);
       return res.status(500).json({ error: err.message });
     }
     res.json(result);
+  });
+});
+
+router.get("/api/items", (req, res) => {
+  db.query("SELECT id, name FROM items ORDER BY name ASC", (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
   });
 });
 
@@ -1004,7 +1036,7 @@ router.get("/api/report/sales-report", (req, res) => {
           if (err) return res.status(500).json({ error: "Failed category revenue" });
           report.categoryRevenues = catRows;
 
-          res.json(report); // final response
+          res.json(report); // Final response
         });
       });
     });
